@@ -44,6 +44,7 @@
 	- pinocchio (for rigid body dynamics and kinematics)
 	- figaroh (for system identification, sysID)
     - ROS2 Python/C++ client libraries
+    - mink: inverse kinematics
 
 - **Other Tools:**
     - MoveIt (for motion planning)
