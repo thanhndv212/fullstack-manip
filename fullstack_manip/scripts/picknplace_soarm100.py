@@ -19,7 +19,7 @@ scene_manager = MuJoCoSceneManager(
 
 
 # Initialize robot and controller
-robot = Robot(scene_manager.model, scene_manager.data, end_effector_name="Fixed_Jaw")
+robot = Robot(scene_manager.model, scene_manager.data, end_effector_name="attachment_site")
 controller = PickPlaceController(
     robot, gripper_joint_names=["Jaw"], object_geom="cube"
 )

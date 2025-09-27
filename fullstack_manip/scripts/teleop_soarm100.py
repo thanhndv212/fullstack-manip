@@ -64,7 +64,7 @@ tasks = [
         frame_name="attachment_site",
         frame_type="site",
         position_cost=1.0,
-        orientation_cost=1.0,
+        orientation_cost=0.0,
         lm_damping=1e-6,
     ),
     posture_task := mink.PostureTask(model, cost=1e-3),

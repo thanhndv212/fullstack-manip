@@ -124,9 +124,9 @@ class MotionPlanner:
         )
         pose_task = mink.FrameTask(
             frame_name=self.end_effector_name,
-            frame_type="body",
+            frame_type="site",
             position_cost=1.0,
-            orientation_cost=1.0,
+            orientation_cost=0.0,
             lm_damping=1e-6,
         )
         pose_task.set_target(target_pose)
