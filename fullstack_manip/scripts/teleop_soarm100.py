@@ -1,3 +1,37 @@
+"""
+## Key Mappings
+| Key | Action |
+|-----|--------|
+| `9` | Toggle teleoperation On/Off. |
+| `n` | Toggle between manual and non-manual mode. |
+| `.` | Toggle between rotation and translation mode. |
+| `8` | Cycle through different mocap data. |
+| `+` | Increase movement step size or movement speed. |
+| `-` | Decrease movement step size or movement speed. |
+| **Arrow Keys** | **Move (rotation / translation) along the X, Y, and Z axes** |
+| `Up` | Move forward (+X) or rotates around X-axis in positive direction. |
+| `Down` | Move backward (-X) or rotates around X-axis in negative direction. |
+| `Right` | Move right (+Y) or rotates around Y-axis in positive direction. |
+| `Left` | Move left (-Y) or rotates around Y-axis in negative direction. |
+| `7` | Move up (+Z) or rotates around Z-axis in positive direction. |
+| `6` | Move down (-Z) or rotates around Z-axis in negative direction. |
+
+---
+
+## Modes
+### **Manual vs. Non-Manual Mode:**
+- **Manual Mode**: Iterative movement using arrow keys.
+- **Non-Manual Mode**: Continuous movement using arrow keys (to stop continuous movement, re-click the arrow key).
+
+### **Rotation vs. Translation Mode:**
+- **Rotation Mode**: Rotation around an axis.
+- **Translation Mode**: Movement along an axis.
+
+Keyword arguments:
+argument -- description
+Return: return_description
+"""
+
 import mujoco
 import numpy as np
 import time
@@ -15,9 +49,7 @@ loader = MuJoCoSceneLoader(
     robot_dir="trs_so_arm100",
     env_dir=ROOT_PATH / "trs_so_arm100",
 )
-
 xml_path = loader.env_dir / "scene_with_table.xml"
-
 scene_manager = MuJoCoSceneManager(
     xml_path=xml_path, loader=loader, load_method="xml_path"
 )
@@ -25,7 +57,7 @@ model = scene_manager.model
 data = scene_manager.data
 
 
-configuration = mink.Configuration(model)
+configuration = mink.Configuration(model, model.key("home").qpos)
 
 tasks = [
     end_effector_task := mink.FrameTask(
@@ -40,8 +72,10 @@ tasks = [
 
 # Enable collision avoidance between (moving_finger, table).
 moving_finger = mink.get_body_geom_ids(model, model.body("Moving_Jaw").id)
+cube = mink.get_body_geom_ids(model, model.body("cube").id)
 collision_pairs = [
     (moving_finger, ["table"]),
+    (cube, ["table"]),
 ]
 
 limits = [
@@ -65,7 +99,7 @@ limits.append(velocity_limit)
 
 ## =================== ##
 
-mid = model.body("target").mocapid[0]
+# mid = model.body("target").mocapid[0]
 
 # IK settings.
 solver = "daqp"
@@ -79,13 +113,13 @@ key_callback = TeleopMocap(data)
 with mujoco.viewer.launch_passive(
     model=model,
     data=data,
-    show_left_ui=False,
+    show_left_ui=True,
     show_right_ui=False,
     key_callback=key_callback,
 ) as viewer:
     mujoco.mjv_defaultFreeCamera(model, viewer.cam)
 
-    # mujoco.mj_resetDataKeyframe(model, data, model.key("home").id)
+    mujoco.mj_resetDataKeyframe(model, data, model.key("home").id)
     configuration.update(data.qpos)
     mujoco.mj_forward(model, data)
 
@@ -114,7 +148,7 @@ with mujoco.viewer.launch_passive(
             ori_achieved = np.linalg.norm(err[3:]) <= ori_threshold
             if pos_achieved and ori_achieved:
                 break
-
+        print(f"IK iters: {i}, pos err: {err[:3]}, ori err: {err[3:]}")
         data.ctrl = configuration.q[:6]
         mujoco.mj_step(model, data)
 

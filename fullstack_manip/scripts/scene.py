@@ -17,6 +17,9 @@ class MuJoCoSceneManager:
         else:
             self.data: Optional[mujoco.MjData] = mujoco.MjData(self.model)
         self.assets: Optional[Dict[str, bytes]] = None
+        mujoco.mj_resetDataKeyframe(self.model, self.data, self.model.key("home").id)
+        self.data.qpos[:] = self.model.key("home").qpos
+        mujoco.mj_forward(self.model, self.data)
 
     def reload(self) -> None:
         """Reload the current scene."""
@@ -96,6 +99,7 @@ class MuJoCoSceneManager:
                         self.data.qpos[joint_id] = pos
             else:
                 self.data.qpos[:] = joint_positions
+            mujoco.mj_forward(self.model, self.data)
 
     def get_joint_positions(
         self, joint_names: Optional[list] = None
