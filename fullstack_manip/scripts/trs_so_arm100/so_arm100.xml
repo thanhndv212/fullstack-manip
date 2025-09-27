@@ -121,7 +121,7 @@
                   <geom class="finger_collision" name="moving_jaw_pad_2" size="0.001 0.005 0.006" pos="-0.0093 -0.067 0"/>
                   <geom class="finger_collision" name="moving_jaw_pad_3" size="0.001 0.01 0.006" pos="-0.0073 -0.055 0"/>
                   <geom class="finger_collision" name="moving_jaw_pad_4" size="0.001 0.01 0.008" pos="-0.0073 -0.035 0"/>
-                  <site name="attachment_site" size="0.01" pos="0 0 0" quat="-1 1 1 1" rgba="1 0 0 1" group="1"/>
+                  <site name="attachment_site" size="0.01" pos="0 0 0" quat="1 0 0 0" rgba="1 0 0 1" group="1"/>
                 </body>
               </body>
             </body>
