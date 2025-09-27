@@ -117,7 +117,7 @@ def get_assets_from_menagerie(_ROBOT_DIR, _GRIPPER_DIR, _ENV_DIR) -> Dict[str, b
     """
 
     assets = {}
-
+    ensure_menagerie_exists()
     path = MENAGERIE_PATH / _ROBOT_DIR
     print(f"Debug: Robot path: {path}")
     update_assets(assets, path, "*.xml")
