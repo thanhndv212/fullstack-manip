@@ -32,10 +32,17 @@
         <body name="target" pos="0.5 0 .5" quat="0 1 0 0" mocap="true">
       <geom type="box" size=".05 .05 .05" contype="0" conaffinity="0" rgba=".6 .3 .3 .2"/>
     </body>
-    <camera name="overhead_cam" focal="1.93e-3 1.93e-3" resolution="1280 720" sensorsize="3896e-6 2140e-6"
+    <body name="cube" pos="0.3 0 0.05">
+      <freejoint/>
+      <geom type="box" size="0.05 0.02 0.06" rgba="1 0 0 1" mass="0.01" friction="3.0 2.0 0.003"/>
+    </body>
+    <!-- <camera name="overhead_cam" focal="1.93e-3 1.93e-3" resolution="1280 720" sensorsize="3896e-6 2140e-6"
             pos="0 -0.303794 1.02524" mode="fixed" quat="0.976332 0.216277 0 0"/>
     <camera name="worms_eye_cam" focal="1.93e-3 1.93e-3" resolution="1280 720" sensorsize="3896e-6 2140e-6"
-            pos="0 -0.377167 0.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/>
+            pos="0 -0.377167 0.0316055" mode="fixed" quat="0.672659 0.739953 0 0"/> -->
   </worldbody>
-
+  <!-- <keyframe>
+    <key name="home" qpos="0 -1.57 1.57 1.57 -1.57 0 0 0 0 1 0 0 0" ctrl="0 -1.57 1.57 1.57 -1.57 0"/>
+    <key name="rest" qpos="0 -3.32 3.11 1.18 0 -0.174 0 0 0 1 0 0 0" ctrl="0 -3.32 3.11 1.18 0 -0.174"/>
+  </keyframe> -->
 </mujoco>

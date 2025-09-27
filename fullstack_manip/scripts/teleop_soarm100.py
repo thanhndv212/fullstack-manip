@@ -85,7 +85,7 @@ with mujoco.viewer.launch_passive(
 ) as viewer:
     mujoco.mjv_defaultFreeCamera(model, viewer.cam)
 
-    mujoco.mj_resetDataKeyframe(model, data, model.key("home").id)
+    # mujoco.mj_resetDataKeyframe(model, data, model.key("home").id)
     configuration.update(data.qpos)
     mujoco.mj_forward(model, data)
 
@@ -115,7 +115,7 @@ with mujoco.viewer.launch_passive(
             if pos_achieved and ori_achieved:
                 break
 
-        data.ctrl = configuration.q
+        data.ctrl = configuration.q[:6]
         mujoco.mj_step(model, data)
 
         # Visualize at fixed FPS.

@@ -144,8 +144,8 @@
     <exclude body1="Base" body2="Rotation_Pitch"/>
   </contact>
 
-  <keyframe>
+  <!-- <keyframe>
     <key name="home" qpos="0 -1.57 1.57 1.57 -1.57 0" ctrl="0 -1.57 1.57 1.57 -1.57 0"/>
     <key name="rest" qpos="0 -3.32 3.11 1.18 0 -0.174" ctrl="0 -3.32 3.11 1.18 0 -0.174"/>
-  </keyframe>
+  </keyframe> -->
 </mujoco>
