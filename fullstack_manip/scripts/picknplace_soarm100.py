@@ -28,8 +28,8 @@ controller = PickPlaceController(
 def main():
     
     # Define pick and place positions
-    pick_position = np.array([0.1, -0.2, 0.1])
-    place_position = np.array([0.1, -0.21, 0.1])
+    pick_position = np.array([0.0, -0.2, 0.01])
+    place_position = np.array([0.0, -0.2, 0.015])
 
     # Perform pick
     print("Starting pick operation...")

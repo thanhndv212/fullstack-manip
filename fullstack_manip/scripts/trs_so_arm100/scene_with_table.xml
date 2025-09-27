@@ -2,7 +2,8 @@
   <compiler meshdir="assets" texturedir="assets"/>
 
   <include file="so_arm100.xml"/>
-
+  <include file="box.xml"/>
+  
   <statistic center="0 -0.2 0.1" extent="0.4"/>
 
   <visual>
@@ -32,13 +33,8 @@
     <body name="target" pos="0.1 -0.2 0.1" quat="1 0 0 0" mocap="true">
       <geom type="box" size=".01 .01 .01" contype="0" conaffinity="0" rgba=".6 .3 .3 .2"/>
     </body>
-    <body name="cube" pos="0.1 -0.2 0.0">
-      <freejoint/>
-      <geom type="box" size="0.02 0.02 0.02" rgba="1 0 0 1" mass="0.01" friction="3.0 2.0 0.003"/>
-      <!-- <geom name="cube" pos="0.1 -0.2 0.0" size="0.02 0.02 0.02" type="box" class="collision"/> -->
-    </body>
   </worldbody>
   <keyframe>
-    <key name="home" qpos="0 -1.57 1.57 1.57 -1.57 0 0.1 -0.2 0.0 1 0 0 0" ctrl="0 -1.57 1.57 1.57 -1.57 0"/>
+    <key name="home" qpos="0 -1.57 1.57 1.57 -1.57 0 0.0 -0.2 0.0 1 0 0 0" ctrl="0 -1.57 1.57 1.57 -1.57 0"/>
   </keyframe>
 </mujoco>

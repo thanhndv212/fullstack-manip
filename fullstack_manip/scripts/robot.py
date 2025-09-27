@@ -78,7 +78,6 @@ class Robot:
         if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
-        current_joint_positions = self.get_robot_joint_positions()
         current_ee_pos, _ = self.get_end_effector_position()
 
         # Plan trajectory
@@ -88,7 +87,8 @@ class Robot:
 
         if trajectory is None:
             raise RuntimeError("Failed to plan trajectory")
-
+        
+        current_joint_positions = self.get_robot_joint_positions()
         # Execute trajectory with PID control
         count = 0
         for target in trajectory:

@@ -17,8 +17,9 @@ class PickPlaceController:
         self.gripper_joint_names = gripper_joint_names
         self.object_geom = object_geom
         self.close_position = 0.0  # Closed position
-        self.open_position = 0.1  # Open position
+        self.open_position = 0.5  # Open position
         self.grasp_force_threshold = 5.0  # Minimum force for grasp
+        self.GRASP_SUCCESS = False
         self.release_force_threshold = 1.0  # Maximum force for release
 
     def pick_object(self, object_position: np.ndarray) -> None:
@@ -27,16 +28,29 @@ class PickPlaceController:
             object_position, np.ndarray
         ) or object_position.shape != (3,):
             raise ValueError("Object position must be a 3D numpy array")
+        import time
 
-        # Move to object position
-        self.robot.move_to_position(object_position)
+        # Move to top of object
+        self.robot.move_to_position(object_position + np.array([0, 0, 0.015]))  # Above object
+        time.sleep(3)
 
-        # Close gripper (grasp)
-        self._close_gripper()
+        while not self.GRASP_SUCCESS:
+            # Open gripper
+            self._open_gripper()
+            time.sleep(3)
+            # Move to object position
+            self.robot.move_to_position(object_position)
+            time.sleep(3)
 
-        # Lift object
-        lift_position = object_position + np.array([0, 0, 0.02])  # Lift up 2cm
-        self.robot.move_to_position(lift_position)
+            # Close gripper (grasp)
+            self._close_gripper()
+            time.sleep(3)
+
+            # Lift object
+            self.robot.move_to_position(
+                object_position + np.array([0, 0, 0.015])
+            )
+            time.sleep(3)
 
     def place_object(self, target_position: np.ndarray) -> None:
         """Place object at target position"""
@@ -94,6 +108,7 @@ class PickPlaceController:
                 gripper_geom, self.object_geom
             )
         if total_force > self.grasp_force_threshold:
+            self.GRASP_SUCCESS = True
             print("Grasp successful")
         else:
             print("Grasp failed")

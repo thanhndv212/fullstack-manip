@@ -52,11 +52,10 @@ class MotionPlanner:
     def set_limits(self, collision_pairs: list[tuple[str, str]] = None):
         # Enable collision avoidance between (fixed_finger, table).
         fixed_finger = mink.get_body_geom_ids(self.model, self.model.body("Fixed_Jaw").id)
-        cube = mink.get_body_geom_ids(self.model, self.model.body("cube").id)
+        moving_finger = mink.get_body_geom_ids(self.model, self.model.body("Moving_Jaw").id)
         collision_pairs = [
             (fixed_finger, ["table"]),
-            (fixed_finger, cube),
-            (cube, ["table"]),
+            (moving_finger, ["table"]),
         ]
         limits = [
             mink.ConfigurationLimit(model=self.configuration.model),
