@@ -20,7 +20,7 @@ class Robot:
             self.model = model
             self.data = mujoco.MjData(self.model)
             self.end_effector_name = end_effector_name
-            
+
             # Initialize motion planner
             self.motion_planner = MotionPlanner(
                 self.model,
@@ -60,14 +60,14 @@ class Robot:
             self.data.qpos[: self.robot_nq] = joint_positions
             mujoco.mj_forward(self.model, self.data)
 
-    def get_end_effector_position(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Get end effector position and orientation"""
+    def get_body_pose(self, body_name: str) -> Tuple[np.ndarray, np.ndarray]:
+        """Get body position and orientation"""
         mujoco.mj_forward(self.model, self.data)
-        ee_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_BODY, self.end_effector_name
+        body_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_BODY, body_name
         )
-        pos = self.data.xpos[ee_id].copy()
-        rot = self.data.xmat[ee_id].reshape(3, 3).copy()
+        pos = self.data.xpos[body_id].copy()
+        rot = self.data.xmat[body_id].reshape(3, 3).copy()
         return pos, rot
 
     def move_to_position(
@@ -78,7 +78,7 @@ class Robot:
         if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
-        current_ee_pos, _ = self.get_end_effector_position()
+        current_ee_pos, _ = self.get_body_pose(self.end_effector_name)
 
         # Plan trajectory
         trajectory, t = self.motion_planner.plan_trajectory(
@@ -87,7 +87,7 @@ class Robot:
 
         if trajectory is None:
             raise RuntimeError("Failed to plan trajectory")
-        
+
         current_joint_positions = self.get_robot_joint_positions()
         # Execute trajectory with PID control
         count = 0
@@ -101,4 +101,104 @@ class Robot:
             self.viewer.step(current_joint_positions)
             time.sleep(self.dt)
             count += 1
+            if self.detect_contact(self.end_effector_name, self.object_geom):
+                print("Contact detected with cube, stopping movement.")
+                break
         print(f"Executed {count} control steps to reach target position.")
+
+    def compute_contact_force(self, geom1_name: str, geom2_name: str) -> float:
+        """
+        Compute the total contact force magnitude between two geometries
+
+        Args:
+            geom1_name: Name of first geometry
+            geom2_name: Name of second geometry
+
+        Returns:
+            Total force magnitude
+        """
+        geom1_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_name
+        )
+        geom2_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_name
+        )
+        total_force = 0.0
+        for contact in self.data.contact[: self.data.ncon]:
+            if (contact.geom1 == geom1_id and contact.geom2 == geom2_id) or (
+                contact.geom1 == geom2_id and contact.geom2 == geom1_id
+            ):
+                total_force += np.linalg.norm(contact.force)
+        return total_force
+
+    def _close_gripper(self) -> None:
+        """Close robot gripper and check for successful grasp"""
+        # Set gripper joints to closed position
+        for joint_name in self.gripper_joint_names:
+            joint_id = self.model.joint(joint_name).id
+            self.data.qpos[joint_id] = self.close_position
+        current_joint_positions = self.get_robot_joint_positions()
+        self.viewer.step(current_joint_positions)
+        time.sleep(self.dt)
+
+        # Check for grasp success: contact forces > threshold
+        total_force = 0.0
+        for joint_name in self.gripper_joint_names:
+            gripper_geom = (
+                f"{joint_name}_geom"  # Assume geom name based on joint
+            )
+            total_force += self.compute_contact_force(
+                gripper_geom, self.object_geom
+            )
+        if total_force > self.grasp_force_threshold:
+            self.GRASP_SUCCESS = True
+            print("Grasp successful")
+        else:
+            print("Grasp failed")
+
+    def _open_gripper(self) -> None:
+        """Open robot gripper and check for successful release"""
+
+        # Set gripper joints to open position
+        for joint_name in self.gripper_joint_names:
+            joint_id = self.model.joint(joint_name).id
+            self.data.qpos[joint_id] = self.open_position
+        current_joint_positions = self.get_robot_joint_positions()
+        self.viewer.step(current_joint_positions)
+        time.sleep(self.dt)
+
+        # Check for release success: contact forces < threshold
+        total_force = 0.0
+        for joint_name in self.gripper_joint_names:
+            gripper_geom = f"{joint_name}_geom"
+            total_force += self.compute_contact_force(
+                gripper_geom, self.object_geom
+            )
+        if total_force < self.release_force_threshold:
+            print("Release successful")
+        else:
+            print("Release failed")
+
+    def detect_contact(self, geom1_name: str, geom2_name: str) -> bool:
+        """
+        Detect if two geometries are in contact
+
+        Args:
+            geom1_name: Name of first geometry
+            geom2_name: Name of second geometry
+
+        Returns:
+            True if the geometries are in contact, False otherwise
+        """
+        geom1_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_name
+        )
+        geom2_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_name
+        )
+        for contact in self.data.contact[: self.data.ncon]:
+            if (contact.geom1 == geom1_id and contact.geom2 == geom2_id) or (
+                contact.geom1 == geom2_id and contact.geom2 == geom1_id
+            ):
+                return True
+        return False
