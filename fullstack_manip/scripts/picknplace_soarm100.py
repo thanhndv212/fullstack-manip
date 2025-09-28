@@ -28,11 +28,13 @@ controller = PickPlaceController(
 def main():
     
     # Define pick and place positions
-    pick_position = np.array([0.0, -0.2, 0.01])
-    place_position = np.array([0.0, -0.2, 0.015])
+    pick_position = robot.get_body_pose("cube")[0] + np.array([0, 0, 0.015])
+    place_position = pick_position + np.array([0.1, 0.1, 0.0])
 
     # Perform pick
     print("Starting pick operation...")
+    print("Current end-effector position:", robot.get_body_pose(robot.end_effector_name)[0])
+    print("Pick position:", pick_position)
     controller.pick_object(pick_position)
 
     # Place
