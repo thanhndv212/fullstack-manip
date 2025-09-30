@@ -348,16 +348,30 @@ class Robot:
         if self.viewer is None:
             raise RuntimeError("Viewer not initialized")
 
-        for point in points:
-            mujoco.mjv_addGeom(
-                self.model,
-                type=mujoco.mjtGeom.mjGEOM_SPHERE,
-                size=[0.002, 0, 0],
-                pos=point.tolist(),
-                rgba=[0, 1, 0, 0.5],
-            )
-        mujoco.mj_forward(self.model, self.data)
-        self.viewer.sync()
+        mujoco.mj_step(self.model, self.data)
+        while self.viewer.is_running():
+            scene = getattr(self.viewer, "user_scn", None)
+            if scene is None:
+                raise RuntimeError("Viewer scene not available")
+
+            scene.ngeom = 0
+            rgba = np.array([0.0, 1.0, 0.0, 0.5], dtype=float)
+            size = np.array([0.002, 0.0, 0.0], dtype=float)
+            max_geom = getattr(scene, "maxgeom", None)
+
+            for i, point in enumerate(points):
+                # if max_geom is not None and scene.ngeom >= max_geom:
+                #     break
+
+                mujoco.mjv_initGeom(
+                    scene.geoms[i],
+                    type=mujoco.mjtGeom.mjGEOM_SPHERE,
+                    size=size,
+                    pos=np.asarray(point, dtype=float),
+                    rgba=rgba,
+                )
+
+            self.viewer.sync()
 
 
 __all__ = ["Robot"]
