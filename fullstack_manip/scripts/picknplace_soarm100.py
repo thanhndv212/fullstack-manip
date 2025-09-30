@@ -17,18 +17,21 @@ scene_manager = MuJoCoSceneManager(
     xml_path=xml_path, loader=loader, load_method="xml_path"
 )
 
+end_effector_name = "attachment_site"  # Updated end-effector name
+object_name = "cube"
+gripper_joint_names = ["Jaw"]
 
 # Initialize robot and controller
-robot = Robot(scene_manager.model, scene_manager.data, end_effector_name="attachment_site")
+robot = Robot(scene_manager.model, scene_manager.data, end_effector_name=end_effector_name)
 controller = PickPlaceController(
-    robot, gripper_joint_names=["Jaw"], object_geom="cube"
+    robot, gripper_joint_names=gripper_joint_names, object_geom=object_name
 )
 
 
 def main():
     
     # Define pick and place positions
-    pick_position = robot.get_body_pose("cube")[0] + np.array([0, 0, 0.015])
+    pick_position = robot.get_body_pose(object_name)[0]
     place_position = pick_position + np.array([0.1, 0.1, 0.0])
 
     # Perform pick

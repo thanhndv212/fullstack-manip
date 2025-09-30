@@ -146,10 +146,6 @@ class MotionPlanner:
                 break
 
         return self.configuration.q.copy()[:6]
-        # if IK_SUCCESS:
-        #     return self.configuration.q.copy()
-        # else:
-        #     raise ValueError("IK failed for pose")
 
     def check_contact_pair(self, geom1_name: str, geom2_name: str) -> bool:
         """
