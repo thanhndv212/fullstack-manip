@@ -2,7 +2,7 @@ import mujoco
 from typing import Optional, Dict, Union
 from pathlib import Path
 
-from .asset_manager import get_assets_from_menagerie, SCRIPTS_ROOT
+from .asset_manager import ROOT_PATH, get_assets_from_menagerie
 
 try:
     from etils import epath
@@ -26,9 +26,7 @@ class MuJoCoSceneLoader:
             self.env_dir = Path(env_dir)
         else:
             self.env_dir = (
-                SCRIPTS_ROOT / "trs_so_arm100"
-                if SCRIPTS_ROOT is not None
-                else None
+                ROOT_PATH / "trs_so_arm100" if ROOT_PATH is not None else None
             )
 
     def load_from_robot_descriptions(self, robot_name: str) -> mujoco.MjModel:
@@ -92,4 +90,4 @@ class MuJoCoSceneLoader:
         )
 
 
-__all__ = ["MuJoCoSceneLoader", "SCRIPTS_ROOT"]
+__all__ = ["MuJoCoSceneLoader", "ROOT_PATH"]

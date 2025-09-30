@@ -7,7 +7,8 @@ from typing import Any, Dict, Union
 # Directory layout helpers.
 PACKAGE_ROOT = epath.Path(__file__).resolve().parent.parent
 SCRIPTS_ROOT = PACKAGE_ROOT / "scripts"
-ROOT_PATH = SCRIPTS_ROOT
+ASSETS_ROOT = PACKAGE_ROOT / "simulation" / "assets"
+ROOT_PATH = ASSETS_ROOT
 DEV_PATH = PACKAGE_ROOT.parent
 MENAGERIE_PATH = DEV_PATH / "mujoco_menagerie"
 # Commit SHA of the menagerie repo.
@@ -138,6 +139,7 @@ def get_assets_from_menagerie(
 
 __all__ = [
     "SCRIPTS_ROOT",
+    "ASSETS_ROOT",
     "ROOT_PATH",
     "DEV_PATH",
     "MENAGERIE_PATH",
