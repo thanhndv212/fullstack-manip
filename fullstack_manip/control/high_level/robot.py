@@ -70,23 +70,26 @@ class Robot:
             body_name,
         )
         pos = self.data.xpos[body_id].copy()
-        rot = self.data.xmat[body_id].reshape(3, 3).copy()
-        return pos, rot
+        quat = self.data.xquat[body_id].copy()
+        return pos, quat
 
     def move_to_position(
         self,
         target_pos: np.ndarray,
+        target_orient: np.ndarray = None,
         duration: float = 4.0,
     ) -> None:
         """Move robot end-effector to target position using Mink IK."""
         if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
-        current_ee_pos, _ = self.get_body_pose(self.end_effector_name)
+        current_ee_pos, current_ee_quat = self.get_body_pose(self.end_effector_name)
 
         trajectory, _ = self.motion_planner.plan_trajectory(
             current_ee_pos,
             target_pos,
+            start_orient=current_ee_quat,
+            end_orient=target_orient,
             duration=duration,
         )
 
@@ -188,8 +191,9 @@ class Robot:
         object_pos, _ = self.get_body_pose(self.object_geom)
         gripper_pos, _ = self.get_body_pose(self.end_effector_name)
         distance = np.linalg.norm(object_pos - gripper_pos)
+        print(f"Debug info: gripper_pos = {gripper_pos}, object_pos = {object_pos}")
         print(f"Distance between object and gripper: {distance}")
-        return distance < 0.02
+        return distance < 0.015
 
     def _close_gripper(self) -> None:
         """Close robot gripper and check for successful grasp."""

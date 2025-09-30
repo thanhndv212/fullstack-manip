@@ -54,7 +54,7 @@ def main():
     
     # Define pick and place positions
     pick_position = robot.get_body_pose(object_name)[0]
-    place_position = pick_position + np.array([0.1, 0.1, 0.0])
+    place_position = pick_position + np.array([0.1, 0.1, 0.05])
 
     # Perform pick
     print("Starting pick operation...")

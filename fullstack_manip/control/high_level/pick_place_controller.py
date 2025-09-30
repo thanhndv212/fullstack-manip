@@ -24,20 +24,22 @@ class PickPlaceController:
         self.robot.object_geom = object_geom
         self.robot.close_position = 0.0
         self.robot.open_position = 1.0
-        self.robot.grasp_force_threshold = 1.5
+        self.robot.grasp_force_threshold = 1.0
         self.robot.GRASP_SUCCESS = False
         self.robot.release_force_threshold = 0.01
         self.reach_threshold = np.array([0.1, 0.1, 0.1])
 
-    def is_within_reach(self, position: np.ndarray) -> bool:
+    def is_within_reach(self, current_pos: np.ndarray = None, target_pos: np.ndarray = None) -> bool:
         """Return True if the desired pose is within reach of the gripper."""
-        if not isinstance(position, np.ndarray) or position.shape != (3,):
+        if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
             raise ValueError("Position must be a 3D numpy array")
-        current_position, _ = self.robot.get_body_pose(
-            self.robot.end_effector_name
-        )
+        if current_pos is None:
+            current_pos, _ = self.robot.get_body_pose(self.robot.end_effector_name)
+        if not isinstance(current_pos, np.ndarray) or current_pos.shape != (3,):
+            raise ValueError("Current position must be a 3D numpy array")
+        
         return np.all(
-            np.abs(current_position - position) <= self.reach_threshold
+            np.abs(current_pos - target_pos) <= self.reach_threshold
         )
 
     def pick_object(self, object_position: np.ndarray) -> None:
@@ -53,27 +55,28 @@ class PickPlaceController:
         init_object_pos = object_position.copy()
         self.robot.GRASP_SUCCESS = False
         top_offset = np.array([0.04, 0.0, 0.05])
-        grasp_offset = np.array([0.02, 0.0, 0.005])
+        grasp_offset = np.array([0.02, 0.0, -0.005])
         while not self.robot.GRASP_SUCCESS:
-            object_position = self.robot.get_body_pose(
+            object_position, object_orientation = self.robot.get_body_pose(
                 self.robot.object_geom
-            )[0]
-            if not self.is_within_reach(init_object_pos):
+            )
+
+            if not self.is_within_reach(object_position, init_object_pos):
                 raise ValueError("Object position is out of reach")
 
             top_position = object_position + top_offset
-            self.robot.move_to_position(top_position)
+            self.robot.move_to_position(top_position, object_orientation)
             time.sleep(3)
 
             self.robot._open_gripper()
             time.sleep(3)
 
-            object_position = self.robot.get_body_pose(
+            object_position, object_orientation = self.robot.get_body_pose(
                 self.robot.object_geom
-            )[0]
+            )
 
             grasp_position = object_position + grasp_offset
-            self.robot.move_to_position(grasp_position)
+            self.robot.move_to_position(grasp_position, object_orientation)
             time.sleep(3)
 
             self.robot._close_gripper()

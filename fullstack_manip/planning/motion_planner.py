@@ -90,9 +90,15 @@ class MotionPlanner:
         limits.append(velocity_limit)
         self.limits = limits
 
-    def plan_trajectory(
-        self, start_pos, end_pos, start_vel=None, end_vel=None, duration=4.0, solve_for_startpos=False
-    ):
+    def plan_trajectory(self,
+                        start_pos: np.ndarray,
+                        end_pos: np.ndarray,
+                        start_orient: np.ndarray | None = None,
+                        end_orient: np.ndarray | None = None,
+                        start_vel: np.ndarray | None = None,
+                        end_vel: np.ndarray | None = None,
+                        duration: float = 4.0,
+                        solve_for_startpos: bool = False):
         """
         Plan a smooth trajectory using Mink for IK waypoints
 
@@ -107,10 +113,10 @@ class MotionPlanner:
         """
         # Solve IK for start and end poses
         if solve_for_startpos:
-            start_joints = self.solve_ik_for_pose(start_pos)
+            start_joints = self.solve_ik_for_pose(start_pos, start_orient)
         else:
             start_joints = self.data.qpos[:6]
-        end_joints = self.solve_ik_for_pose(end_pos)
+        end_joints = self.solve_ik_for_pose(end_pos, end_orient)
 
         # Generate trajectory in joint space
         distance = np.linalg.norm(end_joints - start_joints)
