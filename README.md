@@ -1,7 +1,7 @@
 
 # Fullstack Manipulation Project
 
->A modular, extensible framework for research and development in robotic manipulation, supporting both model-based and learning-based approaches. Initially focused on the UR10 manipulator, but designed for generalization to other fixed-base robots.
+>A modular, extensible framework for research and development in robotic manipulation, supporting both model-based and learning-based approaches. Initially focused on the SO-ARM100 manipulator, but designed for generalization to other fixed-base robots.
 
 ---
 
@@ -29,7 +29,7 @@ fullstack-manip/
 ```
 
 ## Key Features
-- UR10 support (URDF, sysID, comms)
+- SO-ARM100 support (URDF, sysID, comms)
 - Multi-sensor state estimation (camera, mocap, IMU)
 - MuJoCo-based simulation with sim2real tools
 - Model-based stack: planning, visual servoing, MPC
