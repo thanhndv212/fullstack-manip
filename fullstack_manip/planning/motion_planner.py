@@ -19,7 +19,10 @@ class MotionPlanner:
         self,
         model: mujoco.MjModel,
         data: mujoco.MjData,
-        end_effector_name="Fixed_Jaw",
+        end_effector_name=None,
+        end_effector_type=None,
+        gripper_bodies=None,
+        obstacles=None,
         max_velocity=0.5,
         max_acceleration=1.0,
         dt=0.01,
@@ -30,15 +33,18 @@ class MotionPlanner:
         Args:
             model: MuJoCo model
             data: MuJoCo data
-            end_effector_name: Name of the end effector (default:
-                attachment_site)
+            end_effector_name: Name of the end effector
+            end_effector_type: Type of the end effector
             max_velocity: Maximum allowed velocity
             max_acceleration: Maximum allowed acceleration
             dt: Time step for trajectory
-        """
+        """ 
         self.model = model
         self.data = data
         self.end_effector_name = end_effector_name
+        self.end_effector_type = end_effector_type
+        self.gripper_bodies = gripper_bodies
+        self.obstacles = obstacles
         self.max_velocity = max_velocity
         self.max_acceleration = max_acceleration
         self.dt = dt
@@ -57,19 +63,18 @@ class MotionPlanner:
         self.set_limits()
 
     def set_limits(self, collision_pairs: list[tuple[str, str]] = None):
-        # Enable collision avoidance between (fixed_finger, table).
-        fixed_finger = mink.get_body_geom_ids(
-            self.model,
-            self.model.body("Fixed_Jaw").id,
-        )
-        moving_finger = mink.get_body_geom_ids(
-            self.model,
-            self.model.body("Moving_Jaw").id,
-        )
-        collision_pairs = [
-            (fixed_finger, ["table"]),
-            (moving_finger, ["table"]),
-        ]
+        if collision_pairs is None:
+            collision_pairs = []
+        
+        for body in self.gripper_bodies:
+            body_geom_ids = mink.get_body_geom_ids(
+                self.model,
+                self.model.body(body).id,
+            )
+            for geom_id in body_geom_ids:
+                for obstacle in self.obstacles:
+                    collision_pairs.append(([geom_id], [obstacle]))
+
         limits = [
             mink.ConfigurationLimit(model=self.configuration.model),
             mink.CollisionAvoidanceLimit(
@@ -113,10 +118,10 @@ class MotionPlanner:
         """
         # Solve IK for start and end poses
         if solve_for_startpos:
-            start_joints = self.solve_ik_for_pose(start_pos, start_orient)
+            start_joints = self.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, start_pos, start_orient)
         else:
             start_joints = self.data.qpos[:6]
-        end_joints = self.solve_ik_for_pose(end_pos, end_orient)
+        end_joints = self.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, end_pos, end_orient)
 
         # Generate trajectory in joint space
         distance = np.linalg.norm(end_joints - start_joints)
@@ -131,7 +136,7 @@ class MotionPlanner:
 
         return trajectory, t
 
-    def solve_ik_for_pose(self, target_pos, target_orient=None):
+    def solve_ik_for_pose(self, frame_name: str, frame_type: str, target_pos: np.ndarray, target_orient: np.ndarray | None = None):
         """Helper to solve IK for a pose using Mink"""
         tasks = []
 
@@ -148,8 +153,8 @@ class MotionPlanner:
             target_pos,
         )
         pose_task = mink.FrameTask(
-            frame_name=self.end_effector_name,
-            frame_type="site",
+            frame_name=frame_name,
+            frame_type=frame_type,
             position_cost=1.0,
             orientation_cost=0.0,
             lm_damping=1e-6,

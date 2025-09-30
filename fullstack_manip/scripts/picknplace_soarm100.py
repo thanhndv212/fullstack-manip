@@ -35,18 +35,27 @@ scene_manager = MuJoCoSceneManager(
     xml_path=xml_path, loader=loader, load_method="xml_path"
 )
 
-end_effector_name = "attachment_site"  # Updated end-effector name
+# Initialize parameters
+end_effector_name = "attachment_site"
+end_effector_type = "site"
 object_name = "cube"
 gripper_joint_names = ["Jaw"]
+gripper_bodies = ["Fixed_Jaw", "Moving_Jaw"]
+obstacles = ["table"]
 
 # Initialize robot and controller
 robot = Robot(
     scene_manager.model,
     scene_manager.data,
     end_effector_name=end_effector_name,
+    end_effector_type=end_effector_type,
+    gripper_bodies=gripper_bodies,
+    obstacles=obstacles,
 )
 controller = PickPlaceController(
-    robot, gripper_joint_names=gripper_joint_names, object_geom=object_name
+    robot,
+    gripper_joint_names=gripper_joint_names,
+    object_geom=object_name
 )
 
 

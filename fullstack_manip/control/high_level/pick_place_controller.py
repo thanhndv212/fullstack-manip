@@ -15,10 +15,10 @@ class PickPlaceController:
         self,
         robot: "Robot",
         gripper_joint_names: List[str] | None = None,
-        object_geom: str = "cube",
+        object_geom: str = None,
     ) -> None:
         if gripper_joint_names is None:
-            gripper_joint_names = ["Jaw"]
+            raise ValueError("Gripper joint names must be provided")
         self.robot = robot
         self.robot.gripper_joint_names = gripper_joint_names
         self.robot.object_geom = object_geom

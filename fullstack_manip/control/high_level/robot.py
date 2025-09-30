@@ -17,17 +17,24 @@ class Robot:
         self,
         model: mujoco.MjModel,
         data: Optional[mujoco.MjData] = None,
-        end_effector_name: str = "Fixed_Jaw",
+        end_effector_name: str = None,
+        end_effector_type: str = None,
+        gripper_bodies: List[str] = None,
+        obstacles: List[str] = None,
     ):
         try:
             self.model = model
             self.data = mujoco.MjData(self.model)
             self.end_effector_name = end_effector_name
-            self.gripper_bodies = ["Fixed_Jaw", "Moving_Jaw"]
+            self.end_effector_type = end_effector_type
+            self.gripper_bodies = gripper_bodies
             self.motion_planner = MotionPlanner(
                 self.model,
                 self.data,
                 self.end_effector_name,
+                self.end_effector_type,
+                self.gripper_bodies,
+                obstacles,
             )
             self.pid_controller = PIDController(
                 kp=10.0,
@@ -319,7 +326,7 @@ class Robot:
 
         for target in targets:
             self.set_robot_joint_positions(seed_configuration)
-            ik_solution = self.motion_planner.solve_ik_for_pose(target)
+            ik_solution = self.motion_planner.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, target)
             if ik_solution is None:
                 continue
 
