@@ -5,6 +5,7 @@ import mujoco.viewer
 from loader import MuJoCoSceneLoader
 from scene import MuJoCoSceneManager
 from assets import ROOT_PATH
+from robot import Robot
 
 
 # Example usage
@@ -33,6 +34,12 @@ scene_manager = MuJoCoSceneManager(xml_path=xml_path, loader=loader, load_method
 model = scene_manager.model
 data = scene_manager.data
 
+
+end_effector_name = "attachment_site"  # Updated end-effector name
+
+# Initialize robot and controller
+robot = Robot(scene_manager.model, scene_manager.data,end_effector_name)
+
 # Define a simple joint trajectory (sinusoidal motion for all joints)
 t = np.linspace(0, 5, 500)  # 5 seconds, 500 steps
 q_traj = np.zeros((len(t), model.nq))
@@ -41,13 +48,15 @@ for j in range(model.nq):
         2 * np.pi * t / 5 + j * np.pi / 6
     )  # Phase shift for each joint
 
-# Launch the viewer
-with mujoco.viewer.launch_passive(
-    model, data, show_left_ui=False, show_right_ui=False
-) as viewer:
-    while viewer.is_running():
-        for i in range(len(t)):
-            data.qpos[:] = q_traj[i]
-            mujoco.mj_forward(model, data)
-            viewer.sync()
-            time.sleep(0.01)  # ~100Hz
+reach_points = robot.compute_workspace()
+robot.visualize_workspace(reach_points)
+# # Launch the viewer
+# with mujoco.viewer.launch_passive(
+#     model, data, show_left_ui=False, show_right_ui=False
+# ) as viewer:
+#     while viewer.is_running():
+#         for i in range(len(t)):
+#             data.qpos[:] = q_traj[i]
+#             mujoco.mj_forward(model, data)
+#             viewer.sync()
+#             time.sleep(0.01)  # ~100Hz
