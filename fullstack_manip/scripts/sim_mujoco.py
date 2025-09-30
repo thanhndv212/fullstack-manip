@@ -1,11 +1,22 @@
-import mujoco
 import numpy as np
-import time
-import mujoco.viewer
-from loader import MuJoCoSceneLoader
-from scene import MuJoCoSceneManager
-from assets import ROOT_PATH
-from robot import Robot
+
+try:
+    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.simulation.asset_manager import ROOT_PATH
+    from fullstack_manip.simulation.loader import MuJoCoSceneLoader
+    from fullstack_manip.simulation.scene import MuJoCoSceneManager
+except ModuleNotFoundError:  # pragma: no cover - script execution fallback
+    import sys
+    from pathlib import Path
+
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.simulation.asset_manager import ROOT_PATH
+    from fullstack_manip.simulation.loader import MuJoCoSceneLoader
+    from fullstack_manip.simulation.scene import MuJoCoSceneManager
 
 
 # Example usage
@@ -30,7 +41,11 @@ xml_path = loader.env_dir / "scene_with_table.xml"
 
 
 # create scene manager
-scene_manager = MuJoCoSceneManager(xml_path=xml_path, loader=loader, load_method="xml_path")
+scene_manager = MuJoCoSceneManager(
+    xml_path=xml_path,
+    loader=loader,
+    load_method="xml_path",
+)
 model = scene_manager.model
 data = scene_manager.data
 
@@ -38,7 +53,7 @@ data = scene_manager.data
 end_effector_name = "attachment_site"  # Updated end-effector name
 
 # Initialize robot and controller
-robot = Robot(scene_manager.model, scene_manager.data,end_effector_name)
+robot = Robot(scene_manager.model, scene_manager.data, end_effector_name)
 
 # Define a simple joint trajectory (sinusoidal motion for all joints)
 t = np.linspace(0, 5, 500)  # 5 seconds, 500 steps

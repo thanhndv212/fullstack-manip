@@ -1,46 +1,42 @@
-"""
-## Key Mappings
-| Key | Action |
-|-----|--------|
-| `9` | Toggle teleoperation On/Off. |
-| `n` | Toggle between manual and non-manual mode. |
-| `.` | Toggle between rotation and translation mode. |
-| `8` | Cycle through different mocap data. |
-| `+` | Increase movement step size or movement speed. |
-| `-` | Decrease movement step size or movement speed. |
-| **Arrow Keys** | **Move (rotation / translation) along the X, Y, and Z axes** |
-| `Up` | Move forward (+X) or rotates around X-axis in positive direction. |
-| `Down` | Move backward (-X) or rotates around X-axis in negative direction. |
-| `Right` | Move right (+Y) or rotates around Y-axis in positive direction. |
-| `Left` | Move left (-Y) or rotates around Y-axis in negative direction. |
-| `7` | Move up (+Z) or rotates around Z-axis in positive direction. |
-| `6` | Move down (-Z) or rotates around Z-axis in negative direction. |
+"""Keyboard mappings for teleoperation.
 
----
+Key bindings:
+- 9: toggle teleoperation on/off
+- n: switch manual/automatic mode
+- .: toggle rotation vs. translation
+- 8: cycle mocap targets
+- +/-: adjust movement speed
+- Arrow keys: move/rotate in the horizontal plane
+- 7/6: move along positive/negative Z
 
-## Modes
-### **Manual vs. Non-Manual Mode:**
-- **Manual Mode**: Iterative movement using arrow keys.
-- **Non-Manual Mode**: Continuous movement using arrow keys (to stop continuous movement, re-click the arrow key).
-
-### **Rotation vs. Translation Mode:**
-- **Rotation Mode**: Rotation around an axis.
-- **Translation Mode**: Movement along an axis.
-
-Keyword arguments:
-argument -- description
-Return: return_description
+Modes:
+- Manual: discrete movement per key press
+- Non-manual: continuous motion until the same key is pressed again
+- Rotation mode: rotate around axes
+- Translation mode: translate along axes
 """
 
 import mujoco
-import numpy as np
-import time
 import mujoco.viewer
-from loader import MuJoCoSceneLoader
-from scene import MuJoCoSceneManager
-from assets import ROOT_PATH
+import numpy as np
 
-from loop_rate_limiters import RateLimiter
+try:
+    from fullstack_manip.simulation.asset_manager import ROOT_PATH
+    from fullstack_manip.simulation.loader import MuJoCoSceneLoader
+    from fullstack_manip.simulation.scene import MuJoCoSceneManager
+except ModuleNotFoundError:  # pragma: no cover - script execution fallback
+    import sys
+    from pathlib import Path
+
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    from fullstack_manip.simulation.asset_manager import ROOT_PATH
+    from fullstack_manip.simulation.loader import MuJoCoSceneLoader
+    from fullstack_manip.simulation.scene import MuJoCoSceneManager
+
+from fullstack_manip.utils.loop_rate_limiters import RateLimiter
 
 import mink
 from mink.contrib import TeleopMocap
@@ -97,7 +93,7 @@ max_velocities = {
 velocity_limit = mink.VelocityLimit(model, max_velocities)
 limits.append(velocity_limit)
 
-## =================== ##
+# ===================
 
 # mid = model.body("target").mocapid[0]
 
