@@ -35,6 +35,8 @@ class MotionPlanner:
             data: MuJoCo data
             end_effector_name: Name of the end effector
             end_effector_type: Type of the end effector
+            gripper_bodies: List of gripper body names for collision checking
+            obstacles: List of obstacle geometry names for collision checking
             max_velocity: Maximum allowed velocity
             max_acceleration: Maximum allowed acceleration
             dt: Time step for trajectory
@@ -110,9 +112,13 @@ class MotionPlanner:
         Args:
             start_pos: Starting position (array)
             end_pos: Ending position (array)
+            start_orient: Starting orientation (optional)
+            end_orient: Ending orientation (optional)
             start_vel: Starting velocity (optional)
             end_vel: Ending velocity (optional)
-
+            duration: Desired duration of the trajectory
+            solve_for_startpos: Whether to solve IK for start position
+            
         Returns:
             Trajectory as array of joint positions over time
         """
