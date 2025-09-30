@@ -326,7 +326,9 @@ class Robot:
 
         for target in targets:
             self.set_robot_joint_positions(seed_configuration)
-            ik_solution = self.motion_planner.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, target)
+            ik_solution = self.motion_planner.solve_ik_for_qpos(
+                self.end_effector_name, self.end_effector_type, target
+            )
             if ik_solution is None:
                 continue
 

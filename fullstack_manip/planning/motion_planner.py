@@ -40,7 +40,7 @@ class MotionPlanner:
             max_velocity: Maximum allowed velocity
             max_acceleration: Maximum allowed acceleration
             dt: Time step for trajectory
-        """ 
+        """
         self.model = model
         self.data = data
         self.end_effector_name = end_effector_name
@@ -67,7 +67,7 @@ class MotionPlanner:
     def set_limits(self, collision_pairs: list[tuple[str, str]] = None):
         if collision_pairs is None:
             collision_pairs = []
-        
+
         for body in self.gripper_bodies:
             body_geom_ids = mink.get_body_geom_ids(
                 self.model,
@@ -97,15 +97,17 @@ class MotionPlanner:
         limits.append(velocity_limit)
         self.limits = limits
 
-    def plan_trajectory(self,
-                        start_pos: np.ndarray,
-                        end_pos: np.ndarray,
-                        start_orient: np.ndarray | None = None,
-                        end_orient: np.ndarray | None = None,
-                        start_vel: np.ndarray | None = None,
-                        end_vel: np.ndarray | None = None,
-                        duration: float = 4.0,
-                        solve_for_startpos: bool = False):
+    def plan_trajectory(
+        self,
+        start_pos: np.ndarray,
+        end_pos: np.ndarray,
+        start_orient: np.ndarray | None = None,
+        end_orient: np.ndarray | None = None,
+        start_vel: np.ndarray | None = None,
+        end_vel: np.ndarray | None = None,
+        duration: float = 4.0,
+        solve_for_startpos: bool = False,
+    ):
         """
         Plan a smooth trajectory using Mink for IK waypoints
 
@@ -118,16 +120,23 @@ class MotionPlanner:
             end_vel: Ending velocity (optional)
             duration: Desired duration of the trajectory
             solve_for_startpos: Whether to solve IK for start position
-            
+
         Returns:
             Trajectory as array of joint positions over time
         """
         # Solve IK for start and end poses
         if solve_for_startpos:
-            start_joints = self.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, start_pos, start_orient)
+            start_joints = self.solve_ik_for_qpos(
+                self.end_effector_name,
+                self.end_effector_type,
+                start_pos,
+                start_orient,
+            )
         else:
             start_joints = self.data.qpos[:6]
-        end_joints = self.solve_ik_for_pose(self.end_effector_name, self.end_effector_type, end_pos, end_orient)
+        end_joints = self.solve_ik_for_qpos(
+            self.end_effector_name, self.end_effector_type, end_pos, end_orient
+        )
 
         # Generate trajectory in joint space
         distance = np.linalg.norm(end_joints - start_joints)
@@ -142,7 +151,13 @@ class MotionPlanner:
 
         return trajectory, t
 
-    def solve_ik_for_pose(self, frame_name: str, frame_type: str, target_pos: np.ndarray, target_orient: np.ndarray | None = None):
+    def solve_ik_for_qpos(
+        self,
+        frame_name: str,
+        frame_type: str,
+        target_pos: np.ndarray,
+        target_orient: np.ndarray | None = None,
+    ):
         """Helper to solve IK for a pose using Mink"""
         tasks = []
 

@@ -51,7 +51,7 @@ This document provides a quick reference for automated code-generation agents in
 
 - **`MotionPlanner` (`planning/motion_planner.py`)**
   - Configures `mink.Configuration` with collision avoidance limits, velocity bounds, and IK convergence settings.
-  - Provides `plan_trajectory()` (CubicSpline interpolation between IK solutions) and `solve_ik_for_pose()` (iterative solver under constraints).
+  - Provides `plan_trajectory()` (CubicSpline interpolation between IK solutions) and `solve_ik_for_qpos()` (iterative solver under constraints).
 
 - **`MuJoCoViewer` (`simulation/viewer.py`)**
   - Launches passive viewers, synchronizes frames, and supports video recording (set via `start_recording`/`stop_recording`).
