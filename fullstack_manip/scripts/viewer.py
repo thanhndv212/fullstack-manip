@@ -11,7 +11,7 @@ class MuJoCoViewer:
         self,
         model: mujoco.MjModel,
         data: mujoco.MjData,
-        show_left_ui: bool = True,
+        show_left_ui: bool = False,
         show_right_ui: bool = False,
         key_callback: Optional[Callable] = None,
     ):
@@ -50,6 +50,12 @@ class MuJoCoViewer:
             show_right_ui=self.show_right_ui,
             key_callback=self.key_callback,
         )
+        self.viewer.opt.geomgroup[0] = 1  # Show group 0 geoms
+        self.viewer.opt.geomgroup[1] = 1  # Show group 1 geoms
+        self.viewer.opt.geomgroup[2] = 1  # Hide visual meshes
+        self.viewer.opt.geomgroup[3] = 1  # Show collision meshes
+        import time
+        time.sleep(10)  # Wait for viewer to initialize
         return self.viewer
 
     def step(self, current_joint_positions) -> None:
@@ -74,3 +80,20 @@ class MuJoCoViewer:
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+
+    def start_recording(self, filename: str) -> None:
+        """
+        Start recording video to the specified file.
+
+        Args:
+            filename: Path to save the video file (should end with .mp4).
+        """
+        if self.viewer:
+            self.viewer.record_video = filename
+        else:
+            raise RuntimeError("Viewer not launched")
+
+    def stop_recording(self) -> None:
+        """Stop recording video."""
+        if self.viewer:
+            self.viewer.record_video = None
