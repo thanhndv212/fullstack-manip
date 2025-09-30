@@ -21,11 +21,11 @@ class MuJoCoViewer:
         self.show_left_ui = show_left_ui
         self.show_right_ui = show_right_ui
         self.key_callback = key_callback
-        self.viewer: Optional[mujoco.viewer.Viewer] = None
+        self.viewer = None
         self.timestamp = 0.0
         self.dt = 0.01
 
-    def launch_passive(self) -> mujoco.viewer.Viewer:
+    def launch_passive(self):
         """Launch a passive MuJoCo viewer instance."""
         if self.model is None or self.data is None:
             raise ValueError(

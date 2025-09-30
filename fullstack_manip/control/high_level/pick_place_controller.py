@@ -24,7 +24,7 @@ class PickPlaceController:
         self.robot.object_geom = object_geom
         self.robot.close_position = 0.0
         self.robot.open_position = 1.0
-        self.robot.grasp_force_threshold = 2.0
+        self.robot.grasp_force_threshold = 1.5
         self.robot.GRASP_SUCCESS = False
         self.robot.release_force_threshold = 0.01
         self.reach_threshold = np.array([0.1, 0.1, 0.1])
@@ -52,8 +52,8 @@ class PickPlaceController:
 
         init_object_pos = object_position.copy()
         self.robot.GRASP_SUCCESS = False
-        top_offset = np.array([0.04, 0.005, 0.05])
-        grasp_offset = np.array([0.02, 0.005, 0.005])
+        top_offset = np.array([0.04, 0.0, 0.05])
+        grasp_offset = np.array([0.02, 0.0, 0.005])
         while not self.robot.GRASP_SUCCESS:
             object_position = self.robot.get_body_pose(
                 self.robot.object_geom
