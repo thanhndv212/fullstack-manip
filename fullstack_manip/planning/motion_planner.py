@@ -52,8 +52,7 @@ class MotionPlanner:
             self.data,
             self.model.key("home").id,
         )
-        self.data.qpos[:] = self.model.key("home").qpos
-        mujoco.mj_forward(self.model, self.data)
+
         self.tasks = []
         self.set_limits()
 
@@ -92,7 +91,7 @@ class MotionPlanner:
         self.limits = limits
 
     def plan_trajectory(
-        self, start_pos, end_pos, start_vel=None, end_vel=None, duration=4.0
+        self, start_pos, end_pos, start_vel=None, end_vel=None, duration=4.0, solve_for_startpos=False
     ):
         """
         Plan a smooth trajectory using Mink for IK waypoints
@@ -107,7 +106,10 @@ class MotionPlanner:
             Trajectory as array of joint positions over time
         """
         # Solve IK for start and end poses
-        start_joints = self.solve_ik_for_pose(start_pos)
+        if solve_for_startpos:
+            start_joints = self.solve_ik_for_pose(start_pos)
+        else:
+            start_joints = self.data.qpos[:6]
         end_joints = self.solve_ik_for_pose(end_pos)
 
         # Generate trajectory in joint space

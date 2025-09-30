@@ -44,6 +44,8 @@ class Robot:
             self.scene_nu = self.model.nu
             self.robot_nq = self.model.nu
             self.dt = 0.01
+            self.data.qpos[:] = self.model.key("home").qpos
+            mujoco.mj_forward(self.model, self.data)
         except Exception as err:  # pragma: no cover - defensive
             raise RuntimeError(f"Failed to initialize robot: {err}")
 
