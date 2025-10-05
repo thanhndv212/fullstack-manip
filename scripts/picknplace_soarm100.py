@@ -12,7 +12,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - script execution fallback
     import sys
 
-    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -55,12 +55,11 @@ robot = Robot(
 controller = PickPlaceController(
     robot,
     gripper_joint_names=gripper_joint_names,
-    object_geom=object_name
+    object_geom=object_name,
 )
 
 
 def main():
-    
     # Define pick and place positions
     pick_position = robot.get_body_pose(object_name)[0]
     place_position = pick_position + np.array([0.1, 0.1, 0.05])
