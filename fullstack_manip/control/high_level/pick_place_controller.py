@@ -4,11 +4,13 @@ from typing import TYPE_CHECKING, List
 
 import numpy as np
 
+from .base_controller import BaseController
+
 if TYPE_CHECKING:  # pragma: no cover - circular import guard
     from .robot import Robot
 
 
-class PickPlaceController:
+class PickPlaceController(BaseController):
     """High-level pick-and-place routine built on the Robot abstraction."""
 
     def __init__(
@@ -19,7 +21,9 @@ class PickPlaceController:
     ) -> None:
         if gripper_joint_names is None:
             raise ValueError("Gripper joint names must be provided")
-        self.robot = robot
+
+        super().__init__(robot)
+
         self.robot.gripper_joint_names = gripper_joint_names
         self.robot.object_geom = object_geom
         self.robot.close_position = 0.0
@@ -27,27 +31,26 @@ class PickPlaceController:
         self.robot.grasp_force_threshold = 1.0
         self.robot.GRASP_SUCCESS = False
         self.robot.release_force_threshold = 0.01
-        self.reach_threshold = np.array([0.1, 0.1, 0.1])
 
-    def is_within_reach(self, current_pos: np.ndarray = None, target_pos: np.ndarray = None) -> bool:
-        """Return True if the desired pose is within reach of the gripper."""
-        if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
-            raise ValueError("Position must be a 3D numpy array")
-        if current_pos is None:
-            current_pos, _ = self.robot.get_body_pose(self.robot.end_effector_name)
-        if not isinstance(current_pos, np.ndarray) or current_pos.shape != (3,):
-            raise ValueError("Current position must be a 3D numpy array")
-        
-        return np.all(
-            np.abs(current_pos - target_pos) <= self.reach_threshold
-        )
+    def execute(
+        self,
+        pick_position: np.ndarray,
+        place_position: np.ndarray,
+    ) -> None:
+        """Execute the pick-and-place behavior.
+
+        Args:
+            pick_position: Target position [x, y, z] for picking the object.
+            place_position: Target position [x, y, z] for placing the object.
+        """
+        self.pick_object(pick_position)
+        self.place_object(place_position)
 
     def pick_object(self, object_position: np.ndarray) -> None:
         """Execute a pick sequence at the provided Cartesian target."""
-        if not (
-            isinstance(object_position, np.ndarray)
-            and object_position.shape == (3,)
-        ):
+        if not isinstance(object_position, np.ndarray):
+            raise ValueError("Object position must be a 3D numpy array")
+        if object_position.shape != (3,):
             raise ValueError("Object position must be a 3D numpy array")
 
         import time
@@ -86,10 +89,9 @@ class PickPlaceController:
 
     def place_object(self, target_position: np.ndarray) -> None:
         """Place the grasped object at the desired Cartesian pose."""
-        if not (
-            isinstance(target_position, np.ndarray)
-            and target_position.shape == (3,)
-        ):
+        if not isinstance(target_position, np.ndarray):
+            raise ValueError("Target position must be a 3D numpy array")
+        if target_position.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
         self.robot.move_to_position(target_position)
