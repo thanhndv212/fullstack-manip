@@ -1,16 +1,10 @@
 import numpy as np
 from scipy.interpolate import CubicSpline
-import mink
 import mujoco
 
-from fullstack_manip.utils.loop_rate_limiters import RateLimiter
-
-# IK settings.
-SOLVER = "daqp"
-POS_THRESHOLD = 1e-4
-ORI_THRESHOLD = 1e-4
-MAX_ITERS = 100
-RATE = RateLimiter(frequency=100.0, warn=False)
+from fullstack_manip.core.collision import CollisionChecker
+from fullstack_manip.core.ik import IKSolver
+from fullstack_manip.core.limit import LimitManager
 
 
 class MotionPlanner:
@@ -50,52 +44,14 @@ class MotionPlanner:
         self.max_velocity = max_velocity
         self.max_acceleration = max_acceleration
         self.dt = dt
-        # Initialize Mink configuration
-        self.configuration = mink.Configuration(
-            self.model,
-            self.model.key("home").qpos,
-        )
-        mujoco.mj_resetDataKeyframe(
-            self.model,
-            self.data,
-            self.model.key("home").id,
-        )
+
+        # Initialize core modules
+        self.collision_checker = CollisionChecker(model, data)
+        self.limit_manager = LimitManager(model, gripper_bodies, obstacles)
+        self.limits = self.limit_manager.set_limits()
+        self.ik_solver = IKSolver(model, data, self.limits)
 
         self.tasks = []
-        self.set_limits()
-
-    def set_limits(self, collision_pairs: list[tuple[str, str]] = None):
-        if collision_pairs is None:
-            collision_pairs = []
-
-        for body in self.gripper_bodies:
-            body_geom_ids = mink.get_body_geom_ids(
-                self.model,
-                self.model.body(body).id,
-            )
-            for geom_id in body_geom_ids:
-                for obstacle in self.obstacles:
-                    collision_pairs.append(([geom_id], [obstacle]))
-
-        limits = [
-            mink.ConfigurationLimit(model=self.configuration.model),
-            mink.CollisionAvoidanceLimit(
-                model=self.configuration.model,
-                geom_pairs=collision_pairs,
-            ),
-        ]
-
-        max_velocities = {
-            "Rotation": np.pi,
-            "Pitch": np.pi,
-            "Elbow": np.pi,
-            "Wrist_Pitch": np.pi,
-            "Wrist_Roll": np.pi,
-            "Jaw": np.pi,
-        }
-        velocity_limit = mink.VelocityLimit(self.model, max_velocities)
-        limits.append(velocity_limit)
-        self.limits = limits
 
     def plan_trajectory(
         self,
@@ -158,48 +114,10 @@ class MotionPlanner:
         target_pos: np.ndarray,
         target_orient: np.ndarray | None = None,
     ):
-        """Helper to solve IK for a pose using Mink"""
-        tasks = []
-
-        self.configuration.update(self.data.qpos)
-
-        target_rotation = (
-            mink.SO3(target_orient)
-            if target_orient is not None
-            else mink.SO3.identity()
+        """Helper to solve IK for a pose using Mink."""
+        return self.ik_solver.solve_ik_for_qpos(
+            frame_name, frame_type, target_pos, target_orient
         )
-
-        target_pose = mink.SE3.from_rotation_and_translation(
-            target_rotation,
-            target_pos,
-        )
-        pose_task = mink.FrameTask(
-            frame_name=frame_name,
-            frame_type=frame_type,
-            position_cost=1.0,
-            orientation_cost=0.0,
-            lm_damping=1e-6,
-        )
-        pose_task.set_target(target_pose)
-
-        tasks.append(pose_task)
-
-        for i in range(MAX_ITERS):
-            vel = mink.solve_ik(
-                self.configuration,
-                tasks,
-                RATE.dt,
-                solver=SOLVER,
-                limits=self.limits,
-            )
-            self.configuration.integrate_inplace(vel, RATE.dt)
-            err = pose_task.compute_error(self.configuration)
-            pos_achieved = np.linalg.norm(err[:3]) <= POS_THRESHOLD
-            ori_achieved = np.linalg.norm(err[3:]) <= ORI_THRESHOLD
-            if pos_achieved and ori_achieved:
-                break
-
-        return self.configuration.q.copy()[:6]
 
     def check_contact_pair(self, geom1_name: str, geom2_name: str) -> bool:
         """
@@ -212,19 +130,9 @@ class MotionPlanner:
         Returns:
             True if in contact (penetration), False otherwise
         """
-        geom1_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom1_name
+        return self.collision_checker.check_contact_pair(
+            geom1_name, geom2_name
         )
-        geom2_id = mujoco.mj_name2id(
-            self.model, mujoco.mjtObj.mjOBJ_GEOM, geom2_name
-        )
-        for contact in self.data.contact[: self.data.ncon]:
-            if (contact.geom1 == geom1_id and contact.geom2 == geom2_id) or (
-                contact.geom1 == geom2_id and contact.geom2 == geom1_id
-            ):
-                if contact.dist < 0:  # Penetration indicates contact
-                    return True
-        return False
 
     def check_collision(self, trajectory, obstacles):
         """
@@ -237,16 +145,7 @@ class MotionPlanner:
         Returns:
             True if collision-free, False otherwise
         """
-        for joints in trajectory:
-            self.data.qpos[:] = joints
-            mujoco.mj_forward(self.model, self.data)
-            # Check for collisions with obstacles (generalized to pairs)
-            for obstacle in obstacles:
-                if self.check_contact_pair(
-                    "robot_geom", obstacle
-                ):  # Assuming "robot_geom" is a representative geom
-                    return False
-        return True
+        return self.collision_checker.check_collision(trajectory, obstacles)
 
     def plot_trajectory(self, trajectory, t):
         """

@@ -1,17 +1,23 @@
+"""Robot class for manipulation tasks."""
+
 from __future__ import annotations
 
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import mujoco
 import numpy as np
 
-from ..low_level.pid_controller import PIDController
-from ...planning.motion_planner import MotionPlanner
-from ...simulation.viewer import MuJoCoViewer
+from ..control.low_level.pid_controller import PIDController
+from ..simulation.viewer import MuJoCoViewer
+from .collision import CollisionChecker
+
+if TYPE_CHECKING:
+    from ..planning.motion_planner import MotionPlanner
 
 
 class Robot:
+    """Robot instance with properties and collision detection."""
 
     def __init__(
         self,
@@ -21,6 +27,7 @@ class Robot:
         end_effector_type: str = None,
         gripper_bodies: List[str] = None,
         obstacles: List[str] = None,
+        motion_planner: Optional["MotionPlanner"] = None,
     ):
         try:
             self.model = model
@@ -28,14 +35,27 @@ class Robot:
             self.end_effector_name = end_effector_name
             self.end_effector_type = end_effector_type
             self.gripper_bodies = gripper_bodies
-            self.motion_planner = MotionPlanner(
-                self.model,
-                self.data,
-                self.end_effector_name,
-                self.end_effector_type,
-                self.gripper_bodies,
-                obstacles,
-            )
+
+            # Initialize collision checker
+            self.collision_checker = CollisionChecker(self.model, self.data)
+
+            # Use provided motion planner or create a new one
+            if motion_planner is not None:
+                self.motion_planner = motion_planner
+            else:
+                # Lazy import to avoid circular dependency
+                from ..planning.motion_planner import MotionPlanner
+
+                self.motion_planner = MotionPlanner(
+                    self.model,
+                    self.data,
+                    self.end_effector_name,
+                    self.end_effector_type,
+                    self.gripper_bodies,
+                    obstacles,
+                )
+
+            # Initialize PID controller
             self.pid_controller = PIDController(
                 kp=10.0,
                 ki=0.1,
@@ -44,19 +64,26 @@ class Robot:
                 integral_limit=1.0,
                 output_limit=10.0,
             )
+
+            # Initialize viewer
             self.viewer = MuJoCoViewer(self.model, self.data)
             self.viewer.launch_passive()
             self.viewer.sync()
+
+            # Robot properties
             self.scene_nq = self.model.nq
             self.scene_nu = self.model.nu
             self.robot_nq = self.model.nu
             self.dt = 0.01
+
+            # Set initial configuration
             self.data.qpos[:] = self.model.key("home").qpos
             mujoco.mj_forward(self.model, self.data)
+
         except Exception as err:  # pragma: no cover - defensive
             raise RuntimeError(f"Failed to initialize robot: {err}")
 
-    def get_robot_joint_positions(self):
+    def get_robot_joint_positions(self) -> Optional[np.ndarray]:
         """Get robot joint positions (assumes first robot_nq joints)."""
         if self.data:
             return self.data.qpos[: self.robot_nq]
@@ -90,7 +117,9 @@ class Robot:
         if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
-        current_ee_pos, current_ee_quat = self.get_body_pose(self.end_effector_name)
+        current_ee_pos, current_ee_quat = self.get_body_pose(
+            self.end_effector_name
+        )
 
         trajectory, _ = self.motion_planner.plan_trajectory(
             current_ee_pos,
@@ -114,75 +143,29 @@ class Robot:
             self.viewer.step(current_joint_positions)
             time.sleep(self.dt)
             count += 1
-            if self.detect_contact(self.end_effector_name, self.object_geom):
+            if self.collision_checker.detect_contact(
+                self.end_effector_name, self.object_geom
+            ):
                 print("Contact detected with cube, stopping movement.")
                 break
         print(f"Executed {count} control steps to reach target position.")
 
-    def get_body_geom_ids(
-        self,
-        model: mujoco.MjModel,
-        body_id: int,
-    ) -> List[int]:
-        """Get immediate geoms belonging to a given body."""
-        geom_start = model.body_geomadr[body_id]
-        geom_end = geom_start + model.body_geomnum[body_id]
-        return list(range(geom_start, geom_end))
-
-    def compute_contact_force(
-        self,
-        geom1_name: str | List[int],
-        geom2_name: str | List[int],
-    ) -> float:
-        """Compute the total contact force magnitude between two geometries."""
-        geom1_ids = (
-            [
-                mujoco.mj_name2id(
-                    self.model,
-                    mujoco.mjtObj.mjOBJ_GEOM,
-                    geom1_name,
-                )
-            ]
-            if isinstance(geom1_name, str)
-            else geom1_name
-        )
-        geom2_ids = (
-            [
-                mujoco.mj_name2id(
-                    self.model,
-                    mujoco.mjtObj.mjOBJ_GEOM,
-                    geom2_name,
-                )
-            ]
-            if isinstance(geom2_name, str)
-            else geom2_name
-        )
-        print(
-            "Computing contact force between geoms "
-            f"{geom1_ids} and {geom2_ids}"
-        )
-        total_force = 0.0
-        for contact in self.data.contact[: self.data.ncon]:
-            if (contact.geom1 in geom1_ids and contact.geom2 in geom2_ids) or (
-                contact.geom1 in geom2_ids and contact.geom2 in geom1_ids
-            ):
-                total_force += np.linalg.norm(contact.frame[:3])
-        return total_force
-
     def check_grasp_success(self) -> bool:
+        """Check if grasp is successful."""
         return self.check_grasp_contact() and self.check_in_hand()
 
     def check_grasp_contact(self) -> bool:
         """Check if the grasp is successful based on contact forces."""
         total_forces = {}
         for gripper_body in self.gripper_bodies:
-            gripper_geoms = self.get_body_geom_ids(
-                self.model,
+            gripper_geoms = self.collision_checker.get_body_geom_ids(
                 self.model.body(gripper_body).id,
             )
-            total_forces[gripper_body] = self.compute_contact_force(
-                gripper_geoms,
-                self.object_geom,
+            total_forces[gripper_body] = (
+                self.collision_checker.compute_contact_force(
+                    gripper_geoms,
+                    self.object_geom,
+                )
             )
             print(
                 "Grasp contact forces of body "
@@ -198,7 +181,10 @@ class Robot:
         object_pos, _ = self.get_body_pose(self.object_geom)
         gripper_pos, _ = self.get_body_pose(self.end_effector_name)
         distance = np.linalg.norm(object_pos - gripper_pos)
-        print(f"Debug info: gripper_pos = {gripper_pos}, object_pos = {object_pos}")
+        print(
+            f"Debug info: gripper_pos = {gripper_pos}, "
+            f"object_pos = {object_pos}"
+        )
         print(f"Distance between object and gripper: {distance}")
         return distance < 0.015
 
@@ -210,9 +196,7 @@ class Robot:
             joint_id = self.model.joint(joint_name).id
             while abs(self.data.qpos[joint_id] - self.close_position) > 1e-3:
                 current_gripper_position = self.data.qpos[joint_id]
-                vel = (
-                    self.close_position - current_gripper_position
-                ) / T
+                vel = (self.close_position - current_gripper_position) / T
                 self.data.qpos[joint_id] = (
                     vel * self.dt + current_gripper_position
                 )
@@ -251,11 +235,10 @@ class Robot:
 
         total_force = 0.0
         for gripper_body in self.gripper_bodies:
-            gripper_geoms = self.get_body_geom_ids(
-                self.model,
+            gripper_geoms = self.collision_checker.get_body_geom_ids(
                 self.model.body(gripper_body).id,
             )
-            total_force += self.compute_contact_force(
+            total_force += self.collision_checker.compute_contact_force(
                 gripper_geoms,
                 self.object_geom,
             )
@@ -263,25 +246,6 @@ class Robot:
             print("Release successful")
         else:
             print("Release failed")
-
-    def detect_contact(self, geom1_name: str, geom2_name: str) -> bool:
-        """Detect if two geometries are in contact."""
-        geom1_id = mujoco.mj_name2id(
-            self.model,
-            mujoco.mjtObj.mjOBJ_GEOM,
-            geom1_name,
-        )
-        geom2_id = mujoco.mj_name2id(
-            self.model,
-            mujoco.mjtObj.mjOBJ_GEOM,
-            geom2_name,
-        )
-        for contact in self.data.contact[: self.data.ncon]:
-            if (contact.geom1 == geom1_id and contact.geom2 == geom2_id) or (
-                contact.geom1 == geom2_id and contact.geom2 == geom1_id
-            ):
-                return True
-        return False
 
     def compute_workspace(
         self,
@@ -370,12 +334,8 @@ class Robot:
             scene.ngeom = 0
             rgba = np.array([0.0, 1.0, 0.0, 0.5], dtype=float)
             size = np.array([0.002, 0.0, 0.0], dtype=float)
-            max_geom = getattr(scene, "maxgeom", None)
 
             for i, point in enumerate(points):
-                # if max_geom is not None and scene.ngeom >= max_geom:
-                #     break
-
                 mujoco.mjv_initGeom(
                     scene.geoms[i],
                     type=mujoco.mjtGeom.mjGEOM_SPHERE,
