@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import numpy as np
 
 if TYPE_CHECKING:  # pragma: no cover - circular import guard
-    from .robot import Robot
+    from ...core.robot import Robot
 
 
 class BaseController(ABC):

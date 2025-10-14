@@ -9,7 +9,7 @@ import numpy as np
 from .base_controller import BaseController
 
 if TYPE_CHECKING:  # pragma: no cover - circular import guard
-    from .robot import Robot
+    from ...core.robot import Robot
 
 
 class GravityCompensationController(BaseController):

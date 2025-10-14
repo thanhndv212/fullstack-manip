@@ -5,7 +5,7 @@ try:
     from fullstack_manip.control.high_level.pick_place_controller import (
         PickPlaceController,
     )
-    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.core.robot import Robot
     from fullstack_manip.simulation.asset_manager import ROOT_PATH
     from fullstack_manip.simulation.loader import MuJoCoSceneLoader
     from fullstack_manip.simulation.scene import MuJoCoSceneManager
@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover - script execution fallback
     from fullstack_manip.control.high_level.pick_place_controller import (
         PickPlaceController,
     )
-    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.core.robot import Robot
     from fullstack_manip.simulation.asset_manager import ROOT_PATH
     from fullstack_manip.simulation.loader import MuJoCoSceneLoader
     from fullstack_manip.simulation.scene import MuJoCoSceneManager

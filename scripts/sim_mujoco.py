@@ -1,7 +1,7 @@
 import numpy as np
 
 try:
-    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.core.robot import Robot
     from fullstack_manip.simulation.asset_manager import ROOT_PATH
     from fullstack_manip.simulation.loader import MuJoCoSceneLoader
     from fullstack_manip.simulation.scene import MuJoCoSceneManager
@@ -13,7 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - script execution fallback
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
 
-    from fullstack_manip.control.high_level.robot import Robot
+    from fullstack_manip.core.robot import Robot
     from fullstack_manip.simulation.asset_manager import ROOT_PATH
     from fullstack_manip.simulation.loader import MuJoCoSceneLoader
     from fullstack_manip.simulation.scene import MuJoCoSceneManager
