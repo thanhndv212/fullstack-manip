@@ -24,13 +24,14 @@ class PickPlaceController(BaseController):
 
         super().__init__(robot)
 
-        self.robot.gripper_joint_names = gripper_joint_names
-        self.robot.object_geom = object_geom
-        self.robot.close_position = 0.0
-        self.robot.open_position = 1.0
-        self.robot.grasp_force_threshold = 1.0
-        self.robot.GRASP_SUCCESS = False
-        self.robot.release_force_threshold = 0.01
+        # Configure gripper using the Gripper object
+        self.robot.gripper.set_joint_names(gripper_joint_names)
+        self.robot.gripper.set_object_geom(object_geom)
+        self.robot.gripper.set_positions(close_pos=0.0, open_pos=1.0)
+        self.robot.gripper.set_force_thresholds(
+            grasp_threshold=1.0,
+            release_threshold=0.01
+        )
 
     def execute(
         self,
@@ -56,12 +57,12 @@ class PickPlaceController(BaseController):
         import time
 
         init_object_pos = object_position.copy()
-        self.robot.GRASP_SUCCESS = False
+        self.robot.gripper.grasp_success = False
         top_offset = np.array([0.04, 0.0, 0.05])
         grasp_offset = np.array([0.02, 0.0, -0.005])
-        while not self.robot.GRASP_SUCCESS:
+        while not self.robot.gripper.grasp_success:
             object_position, object_orientation = self.robot.get_body_pose(
-                self.robot.object_geom
+                self.robot.gripper.object_geom
             )
 
             if not self.is_within_reach(object_position, init_object_pos):
@@ -75,7 +76,7 @@ class PickPlaceController(BaseController):
             time.sleep(3)
 
             object_position, object_orientation = self.robot.get_body_pose(
-                self.robot.object_geom
+                self.robot.gripper.object_geom
             )
 
             grasp_position = object_position + grasp_offset
@@ -84,7 +85,7 @@ class PickPlaceController(BaseController):
 
             self.robot._close_gripper()
             time.sleep(3)
-            if not self.robot.GRASP_SUCCESS:
+            if not self.robot.gripper.grasp_success:
                 print("Grasp failed, retrying...")
 
     def place_object(self, target_position: np.ndarray) -> None:

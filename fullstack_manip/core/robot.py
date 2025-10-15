@@ -11,6 +11,7 @@ import numpy as np
 from ..control.low_level.pid_controller import PIDController
 from ..simulation.viewer import MuJoCoViewer
 from .collision import CollisionChecker
+from .gripper import Gripper
 
 if TYPE_CHECKING:
     from ..planning.motion_planner import MotionPlanner
@@ -38,6 +39,17 @@ class Robot:
 
             # Initialize collision checker
             self.collision_checker = CollisionChecker(self.model, self.data)
+
+            # Initialize gripper
+            self.gripper = Gripper(
+                model=self.model,
+                data=self.data,
+                collision_checker=self.collision_checker,
+                viewer=None,  # Will be set after viewer initialization
+                end_effector_name=self.end_effector_name,
+                gripper_bodies=self.gripper_bodies,
+                dt=0.01,
+            )
 
             # Use provided motion planner or create a new one
             if motion_planner is not None:
@@ -69,6 +81,9 @@ class Robot:
             self.viewer = MuJoCoViewer(self.model, self.data)
             self.viewer.launch_passive()
             self.viewer.sync()
+
+            # Set viewer for gripper after initialization
+            self.gripper.viewer = self.viewer
 
             # Robot properties
             self.scene_nq = self.model.nq
@@ -143,109 +158,36 @@ class Robot:
             self.viewer.step(current_joint_positions)
             time.sleep(self.dt)
             count += 1
-            if self.collision_checker.detect_contact(
-                self.end_effector_name, self.object_geom
-            ):
-                print("Contact detected with cube, stopping movement.")
-                break
+            has_object = self.gripper.object_geom is not None
+            if has_object:
+                contact_detected = self.collision_checker.detect_contact(
+                    self.end_effector_name, self.gripper.object_geom
+                )
+                if contact_detected:
+                    print("Contact detected with cube, stopping movement.")
+                    break
         print(f"Executed {count} control steps to reach target position.")
 
+    # Gripper control methods - delegate to Gripper object
     def check_grasp_success(self) -> bool:
         """Check if grasp is successful."""
-        return self.check_grasp_contact() and self.check_in_hand()
+        return self.gripper.check_grasp_success()
 
     def check_grasp_contact(self) -> bool:
         """Check if the grasp is successful based on contact forces."""
-        total_forces = {}
-        for gripper_body in self.gripper_bodies:
-            gripper_geoms = self.collision_checker.get_body_geom_ids(
-                self.model.body(gripper_body).id,
-            )
-            total_forces[gripper_body] = (
-                self.collision_checker.compute_contact_force(
-                    gripper_geoms,
-                    self.object_geom,
-                )
-            )
-            print(
-                "Grasp contact forces of body "
-                f"{gripper_body}: {total_forces[gripper_body]}"
-            )
-        return all(
-            force > self.grasp_force_threshold
-            for force in total_forces.values()
-        )
+        return self.gripper.check_grasp_contact()
 
     def check_in_hand(self) -> bool:
         """Check if the object is still in hand based on relative position."""
-        object_pos, _ = self.get_body_pose(self.object_geom)
-        gripper_pos, _ = self.get_body_pose(self.end_effector_name)
-        distance = np.linalg.norm(object_pos - gripper_pos)
-        print(
-            f"Debug info: gripper_pos = {gripper_pos}, "
-            f"object_pos = {object_pos}"
-        )
-        print(f"Distance between object and gripper: {distance}")
-        return distance < 0.015
+        return self.gripper.check_in_hand()
 
     def _close_gripper(self) -> None:
         """Close robot gripper and check for successful grasp."""
-        T = 0.5
-        grasp_count = 0
-        for joint_name in self.gripper_joint_names:
-            joint_id = self.model.joint(joint_name).id
-            while abs(self.data.qpos[joint_id] - self.close_position) > 1e-3:
-                current_gripper_position = self.data.qpos[joint_id]
-                vel = (self.close_position - current_gripper_position) / T
-                self.data.qpos[joint_id] = (
-                    vel * self.dt + current_gripper_position
-                )
-                current_joint_positions = self.get_robot_joint_positions()
-                self.viewer.step(current_joint_positions)
-                time.sleep(self.dt)
-
-                if self.check_grasp_success():
-                    grasp_count += 1
-                else:
-                    grasp_count = 0
-
-                print(f"Grasp success count: {grasp_count}")
-                if grasp_count == 100:
-                    self.GRASP_SUCCESS = True
-                    print("Grasp successful")
-                    break
-
-        if not self.GRASP_SUCCESS:
-            print("Grasp failed")
+        self.gripper.close(check_grasp=True)
 
     def _open_gripper(self) -> None:
         """Open robot gripper and check for successful release."""
-        T = 0.5
-        for joint_name in self.gripper_joint_names:
-            joint_id = self.model.joint(joint_name).id
-            while abs(self.data.qpos[joint_id] - self.open_position) > 1e-3:
-                current_gripper_position = self.data.qpos[joint_id]
-                vel = (self.open_position - current_gripper_position) / T
-                self.data.qpos[joint_id] = (
-                    vel * self.dt + current_gripper_position
-                )
-                current_joint_positions = self.get_robot_joint_positions()
-                self.viewer.step(current_joint_positions)
-                time.sleep(self.dt)
-
-        total_force = 0.0
-        for gripper_body in self.gripper_bodies:
-            gripper_geoms = self.collision_checker.get_body_geom_ids(
-                self.model.body(gripper_body).id,
-            )
-            total_force += self.collision_checker.compute_contact_force(
-                gripper_geoms,
-                self.object_geom,
-            )
-        if total_force < self.release_force_threshold:
-            print("Release successful")
-        else:
-            print("Release failed")
+        self.gripper.open(check_release=True)
 
     def compute_workspace(
         self,
