@@ -1,24 +1,43 @@
-"""Robot class for manipulation tasks."""
+"""Robot class for manipulation tasks.
+
+Focused on core robot functionality:
+- Kinematics (FK/IK via external planner)
+- Dynamics
+- Collision detection
+- Gripper control
+- State management
+
+Motion planning, control strategies, and task planning are external components.
+"""
 
 from __future__ import annotations
 
-import time
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, Tuple
 
 import mujoco
 import numpy as np
 
-from ..control.low_level.pid_controller import PIDController
 from ..simulation.viewer import MuJoCoViewer
 from .collision import CollisionChecker
 from .gripper import Gripper
 
-if TYPE_CHECKING:
-    from ..planning.motion_planner import MotionPlanner
-
 
 class Robot:
-    """Robot instance with properties and collision detection."""
+    """
+    Robot instance with core manipulation capabilities.
+
+    Responsibilities:
+    - Joint position/velocity control
+    - Forward kinematics (body poses)
+    - Collision detection
+    - Gripper management
+    - Workspace computation (with external IK)
+
+    Does NOT handle:
+    - Motion planning (use MotionPlanner)
+    - High-level control (use Controllers)
+    - State tracking (use StateManager)
+    """
 
     def __init__(
         self,
@@ -28,14 +47,26 @@ class Robot:
         end_effector_type: str = None,
         gripper_bodies: List[str] = None,
         obstacles: List[str] = None,
-        motion_planner: Optional["MotionPlanner"] = None,
+        motion_planner=None,  # Deprecated, kept for backward compatibility
     ):
         try:
             self.model = model
-            self.data = mujoco.MjData(self.model)
+            self.data = mujoco.MjData(self.model) if data is None else data
             self.end_effector_name = end_effector_name
             self.end_effector_type = end_effector_type
             self.gripper_bodies = gripper_bodies
+            self.obstacles = obstacles
+
+            # Warn about deprecated parameter
+            if motion_planner is not None:
+                import warnings
+
+                warnings.warn(
+                    "motion_planner parameter is deprecated. "
+                    "Use ManipulationPlant to manage components.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
             # Initialize collision checker
             self.collision_checker = CollisionChecker(self.model, self.data)
@@ -49,32 +80,6 @@ class Robot:
                 end_effector_name=self.end_effector_name,
                 gripper_bodies=self.gripper_bodies,
                 dt=0.01,
-            )
-
-            # Use provided motion planner or create a new one
-            if motion_planner is not None:
-                self.motion_planner = motion_planner
-            else:
-                # Lazy import to avoid circular dependency
-                from ..planning.motion_planner import MotionPlanner
-
-                self.motion_planner = MotionPlanner(
-                    self.model,
-                    self.data,
-                    self.end_effector_name,
-                    self.end_effector_type,
-                    self.gripper_bodies,
-                    obstacles,
-                )
-
-            # Initialize PID controller
-            self.pid_controller = PIDController(
-                kp=10.0,
-                ki=0.1,
-                kd=1.0,
-                dt=0.01,
-                integral_limit=1.0,
-                output_limit=10.0,
             )
 
             # Initialize viewer
@@ -122,52 +127,6 @@ class Robot:
         quat = self.data.xquat[body_id].copy()
         return pos, quat
 
-    def move_to_position(
-        self,
-        target_pos: np.ndarray,
-        target_orient: np.ndarray = None,
-        duration: float = 4.0,
-    ) -> None:
-        """Move robot end-effector to target position using Mink IK."""
-        if not isinstance(target_pos, np.ndarray) or target_pos.shape != (3,):
-            raise ValueError("Target position must be a 3D numpy array")
-
-        current_ee_pos, current_ee_quat = self.get_body_pose(
-            self.end_effector_name
-        )
-
-        trajectory, _ = self.motion_planner.plan_trajectory(
-            current_ee_pos,
-            target_pos,
-            start_orient=current_ee_quat,
-            end_orient=target_orient,
-            duration=duration,
-        )
-
-        if trajectory is None:
-            raise RuntimeError("Failed to plan trajectory")
-
-        current_joint_positions = self.get_robot_joint_positions()
-        count = 0
-        for target in trajectory:
-            control_signal = self.pid_controller.compute(
-                target,
-                current_joint_positions,
-            )
-            current_joint_positions += control_signal * self.dt
-            self.viewer.step(current_joint_positions)
-            time.sleep(self.dt)
-            count += 1
-            has_object = self.gripper.object_geom is not None
-            if has_object:
-                contact_detected = self.collision_checker.detect_contact(
-                    self.end_effector_name, self.gripper.object_geom
-                )
-                if contact_detected:
-                    print("Contact detected with cube, stopping movement.")
-                    break
-        print(f"Executed {count} control steps to reach target position.")
-
     # Gripper control methods - delegate to Gripper object
     def check_grasp_success(self) -> bool:
         """Check if grasp is successful."""
@@ -191,6 +150,7 @@ class Robot:
 
     def compute_workspace(
         self,
+        ik_solver,
         grid_size: int = 20,
         grid_range: float = 0.4,
         *,
@@ -199,7 +159,21 @@ class Robot:
         center: Optional[np.ndarray] = None,
         seed: Optional[int] = 0,
     ) -> np.ndarray:
-        """Estimate the robot's reachable workspace via inverse kinematics."""
+        """
+        Estimate the robot's reachable workspace via inverse kinematics.
+
+        Args:
+            ik_solver: IK solver with solve_ik_for_qpos method
+            grid_size: Number of points per axis
+            grid_range: Range from center in meters
+            max_points: Maximum points to sample
+            tolerance: Distance tolerance for IK solution
+            center: Center point for workspace (default: current EE pose)
+            seed: Random seed for sampling
+
+        Returns:
+            Array of reachable points
+        """
         if grid_size < 2:
             raise ValueError("grid_size must be at least 2")
         grid_size = min(grid_size, 60)
@@ -232,7 +206,7 @@ class Robot:
 
         for target in targets:
             self.set_robot_joint_positions(seed_configuration)
-            ik_solution = self.motion_planner.solve_ik_for_qpos(
+            ik_solution = ik_solver.solve_ik_for_qpos(
                 self.end_effector_name, self.end_effector_type, target
             )
             if ik_solution is None:
