@@ -1,161 +1,381 @@
 # Core Package Structure - Visual Overview
 
-## 📦 New Package Structure
+**Last Updated**: October 16, 2025  
+**Status**: ✅ Current Production Structure
+
+---
+
+## 📦 Complete Package Structure
 
 ```
 fullstack_manip/
-├── core/                          ✨ NEW PACKAGE
-│   ├── __init__.py               # Exports: Robot, CollisionChecker, IKSolver, LimitManager
-│   ├── robot.py                  # 📍 Moved from control/high_level/
-│   ├── collision.py              # 🆕 Collision detection & contact forces
-│   ├── ik.py                     # 🆕 Inverse kinematics solver
-│   └── limit.py                  # 🆕 Limit management
-│
-├── planning/
-│   └── motion_planner.py         # ♻️  Refactored - now uses core modules
+├── core/                              ✨ MODULAR ARCHITECTURE
+│   ├── __init__.py                    # Exports all core components
+│   ├── robot.py                       # Robot instance & control
+│   ├── gripper.py                     # Gripper control with state machine
+│   ├── collision.py                   # Collision detection & contact forces
+│   ├── ik.py                          # Inverse kinematics solver
+│   ├── limit.py                       # Joint/workspace limit management
+│   ├── state.py                       # State management (StateManager)
+│   ├── objects.py                     # Object tracking (ObjectManager)
+│   ├── manip_plant.py                 # Main orchestrator (ManipulationPlant)
+│   ├── config.py                      # Configuration system (YAML/JSON)
+│   ├── visualization.py               # Architecture diagram generation
+│   └── interfaces.py                  # Protocol interfaces for extensibility
 │
 ├── control/
-│   └── high_level/
-│       ├── __init__.py           # ♻️  Updated - Robot REMOVED from exports
-│       └── robot.py              # ❌ REMOVED
+│   ├── high_level/
+│   │   ├── gravity_compensation_controller.py
+│   │   ├── impedance_controller.py
+│   │   └── trajectory_following_controller.py
+│   └── low_level/
+│       └── pid_controller.py
 │
-└── scripts/
-    ├── picknplace_soarm100.py    # ♻️  Updated imports
-    └── sim_mujoco.py             # ♻️  Updated imports
+├── planning/
+│   ├── __init__.py
+│   ├── motion_planner.py              # Trajectory planning
+│   ├── moveit/                        # MoveIt! integration
+│   └── planners/                      # Custom planners
+│
+├── execution/
+│   ├── behaviors/                     # Behavior tree nodes
+│   │   ├── control_behaviors.py
+│   │   ├── gripper_behaviors.py
+│   │   ├── motion_behaviors.py
+│   │   ├── perception_behaviors.py
+│   │   └── safety_behaviors.py
+│   ├── blackboard/                    # Shared data storage
+│   └── skills/                        # High-level skills
+│       └── pick_skill.py
+│
+├── simulation/
+│   ├── __init__.py
+│   ├── loader.py                      # URDF/MJCF loading
+│   ├── scene.py                       # Scene management
+│   ├── viewer.py                      # Visualization
+│   ├── asset_manager.py               # Asset handling
+│   └── assets/                        # 3D models, URDFs
+│
+├── state_estimation/
+│   ├── camera/
+│   │   └── calibration/               # Camera calibration tools
+│   ├── fusion/                        # Sensor fusion
+│   ├── imu/                          # IMU processing
+│   └── mocap/                        # Motion capture
+│
+└── utils/
+    └── loop_rate_limiters.py          # Timing utilities
 ```
 
-## 🔄 Code Flow
+## 🏗️ Modular Architecture Overview
 
-### Before Refactoring
-```
-┌─────────────────────────────────────────┐
-│   control/high_level/robot.py           │
-│   • Robot class                          │
-│   • Collision detection methods         │
-│   • IK solving (via MotionPlanner)      │
-│                                          │
-│   planning/motion_planner.py            │
-│   • Trajectory planning                 │
-│   • IK solving (solve_ik_for_qpos)      │
-│   • Limit management (set_limits)       │
-│   • Collision checking                  │
-└─────────────────────────────────────────┘
-       Mixed concerns, duplication
-```
-
-### After Refactoring
-```
-┌──────────────────────────────────────────────────┐
-│                 core/ Package                     │
-│  ┌──────────────┐  ┌──────────────┐             │
-│  │  robot.py    │  │ collision.py │             │
-│  │  • Robot     │  │ • Checker    │             │
-│  │    instance  │  └──────────────┘             │
-│  │  • Workspace │                                │
-│  │  • Gripper   │  ┌──────────────┐             │
-│  └──────────────┘  │   ik.py      │             │
-│                    │ • Solver     │             │
-│  ┌──────────────┐  └──────────────┘             │
-│  │  limit.py    │                                │
-│  │ • Manager    │                                │
-│  └──────────────┘                                │
-└──────────────────────────────────────────────────┘
-                       ↑
-                       │
-         ┌─────────────┴─────────────┐
-         │                           │
-┌────────▼────────┐       ┌──────────▼──────────┐
-│ motion_planner  │       │  control/high_level │
-│ • Planning      │       │  • Controllers      │
-│ • Uses core     │       │  • Re-exports Robot │
-└─────────────────┘       └─────────────────────┘
-   Clear separation of concerns
-```
-
-## 📊 Module Responsibilities
-
-| Module | Responsibility | Key Methods |
-|--------|---------------|-------------|
-| **core/robot.py** | Robot instance & properties | `get_body_pose()`, `move_to_position()`, `compute_workspace()` |
-| **core/collision.py** | Collision detection | `detect_contact()`, `compute_contact_force()`, `check_collision()` |
-| **core/ik.py** | Inverse kinematics | `solve_ik_for_qpos()` |
-| **core/limit.py** | Limit configuration | `set_limits()`, `get_limits()` |
-| **planning/motion_planner.py** | Trajectory planning | `plan_trajectory()`, `plot_trajectory()` |
-
-## 🔗 Import Relationships
+### Core Design Philosophy
 
 ```
-┌─────────────────────────────────────────────────┐
-│             Application Code                     │
-│  (scripts, controllers, behaviors)               │
-└──────────────────┬──────────────────────────────┘
-                   │
-       ┌───────────┴───────────┐
-       │                       │
-       ▼                       ▼
-┌─────────────┐         ┌──────────────┐
-│ core/       │◄────────│ planning/    │
-│ - Robot     │         │ - Planner    │
-│ - Collision │         └──────────────┘
-│ - IK        │
-│ - Limit     │
-└─────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    ManipulationPlant                             │
+│                  (Main Orchestrator)                             │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  Robot       │  │  Gripper     │  │ StateManager │          │
+│  │              │  │              │  │              │          │
+│  │ • Control    │  │ • Grasp      │  │ • Robot      │          │
+│  │ • Kinematics │  │ • Release    │  │ • Objects    │          │
+│  │ • Motion     │  │ • Force      │  │ • Task       │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+│                                                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ObjectManager │  │ IKSolver     │  │ Collision    │          │
+│  │              │  │              │  │ Checker      │          │
+│  │ • Track      │  │ • Solve      │  │ • Detect     │          │
+│  │ • Update     │  │ • Limits     │  │ • Forces     │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+                              ↑
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+    ┌─────────▼────────┐  ┌──▼────────┐  ┌──▼─────────┐
+    │ Configuration    │  │ Planning  │  │ Execution  │
+    │ • YAML/JSON      │  │ • Motion  │  │ • Skills   │
+    │ • Factory        │  │ • IK      │  │ • Behaviors│
+    └──────────────────┘  └───────────┘  └────────────┘
+```
+
+### Component Interaction Flow
+
+```
+Application Layer
+      │
+      ├─→ Load Config (config.py)
+      │        │
+      │        ├─→ Create Components (ComponentFactory)
+      │        │
+      │        └─→ Build Plant (ManipulationPlant)
+      │
+      ├─→ Plan Motion (planning/)
+      │        │
+      │        └─→ Use IK/Collision (core/)
+      │
+      ├─→ Execute Skills (execution/)
+      │        │
+      │        └─→ Control Plant (core/)
+      │
+      └─→ Visualize (visualization.py)
+               │
+               └─→ Generate Diagrams
+```
+
+## 📊 Core Module Responsibilities
+
+| Module | Responsibility | Key Classes/Methods |
+|--------|---------------|---------------------|
+| **manip_plant.py** | Main orchestrator | `ManipulationPlant`, `ManipulationPlantBuilder` |
+| **robot.py** | Robot control & kinematics | `Robot`, `get_body_pose()`, `move_to_position()` |
+| **gripper.py** | Gripper control & state | `Gripper`, `grasp()`, `release()`, `get_state()` |
+| **state.py** | State management | `StateManager`, `RobotState`, `ObjectState`, `TaskState` |
+| **objects.py** | Object tracking | `ObjectManager`, `ManipulationObject` |
+| **collision.py** | Collision detection | `CollisionChecker`, `detect_contact()`, `compute_contact_force()` |
+| **ik.py** | Inverse kinematics | `IKSolver`, `solve_ik_for_qpos()` |
+| **limit.py** | Limit management | `LimitManager`, `set_limits()` |
+| **config.py** | Configuration system | `PlantConfig`, `ComponentFactory`, `create_plant_from_config()` |
+| **visualization.py** | Diagram generation | `PlantVisualizer`, `ConfigVisualizer`, `generate_diagrams()` |
+| **interfaces.py** | Protocol definitions | `RobotProtocol`, `GripperProtocol`, etc. |
+
+## 🔗 Module Dependencies
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                  Application Layer                        │
+│  • examples/pickplace_with_new_architecture.py           │
+│  • scripts/picknplace_soarm100.py                        │
+│  • scripts/sim_mujoco.py                                 │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+        ▼               ▼               ▼
+┌───────────────┐  ┌──────────┐  ┌─────────────┐
+│ execution/    │  │planning/ │  │ control/    │
+│ • skills      │  │• motion  │  │• high_level │
+│ • behaviors   │  │  planner │  │• low_level  │
+└───────┬───────┘  └────┬─────┘  └──────┬──────┘
+        │               │                │
+        └───────────────┼────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────────┐
+        │     fullstack_manip.core      │
+        │                               │
+        │  • ManipulationPlant          │
+        │  • Robot, Gripper             │
+        │  • StateManager               │
+        │  • ObjectManager              │
+        │  • IKSolver, CollisionChecker │
+        │  • Configuration              │
+        │  • Visualization              │
+        └───────────────┬───────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────────┐
+        │    simulation/ (optional)     │
+        │  • loader, scene, viewer      │
+        └───────────────────────────────┘
 
 Legend:
-─────►  Direct import
-◄─────  Uses (composition)
+  ─────►  Direct dependency
+  ◄─────  Provides interface/data
 ```
 
-## ✅ Verification Checklist
+## ✅ Package Features
 
-- [x] `core/` package created
-- [x] `collision.py` - Collision detection extracted
-- [x] `ik.py` - IK solver extracted  
-- [x] `limit.py` - Limit manager extracted
-- [x] `robot.py` - Moved to core, refactored
-- [x] `motion_planner.py` - Updated to use core modules
-- [x] Scripts updated (`picknplace_soarm100.py`, `sim_mujoco.py`)
-- [x] `control/high_level/__init__.py` - Backward compatibility
-- [x] Old `robot.py` removed from `control/high_level/`
-- [x] Circular import resolved
-- [x] All imports tested ✅
-- [x] Documentation created
+### Core Components
+- [x] **ManipulationPlant** - Main orchestrator with builder pattern
+- [x] **Robot** - Robot instance, control, kinematics
+- [x] **Gripper** - State machine-based gripper control
+- [x] **StateManager** - Centralized state management
+- [x] **ObjectManager** - Object tracking and properties
+- [x] **CollisionChecker** - Collision detection & contact forces
+- [x] **IKSolver** - Inverse kinematics solver
+- [x] **LimitManager** - Joint/workspace limits
 
-## 📝 Quick Reference
+### Configuration System
+- [x] **PlantConfig** - YAML/JSON configuration support
+- [x] **ComponentFactory** - Dynamic component creation
+- [x] **Schema validation** - Automatic config validation
+- [x] **create_plant_from_config()** - One-line plant creation
 
-### Import the Core Modules
+### Visualization
+- [x] **PlantVisualizer** - Architecture diagrams
+- [x] **ConfigVisualizer** - Configuration diagrams
+- [x] **Component diagrams** - Module structure
+- [x] **Dataflow diagrams** - Information flow
+- [x] **State diagrams** - State machines
+
+### Integration
+- [x] **Protocol interfaces** - Extensibility via protocols
+- [x] **Behavior tree support** - execution/behaviors/
+- [x] **Skills framework** - execution/skills/
+- [x] **Motion planning** - planning/motion_planner.py
+- [x] **Controllers** - control/high_level/
+- [x] **Simulation** - simulation/ package
+
+## 📝 Quick Usage Reference
+
+### 1. Using ManipulationPlant (Recommended)
+
 ```python
-# ✅ REQUIRED - Only way to import Robot
-from fullstack_manip.core import (
-    Robot,
-    CollisionChecker,
-    IKSolver,
-    LimitManager
+from fullstack_manip.core import ManipulationPlant
+
+# Create plant with builder pattern
+plant = (
+    ManipulationPlant.builder()
+    .with_robot(robot)
+    .with_gripper(gripper)
+    .with_state_manager()
+    .with_object_manager()
+    .build()
 )
 
-# ❌ NO LONGER WORKS
-# from fullstack_manip.control.high_level import Robot
+# Or load from config
+from fullstack_manip.core import create_plant_from_config
+plant = create_plant_from_config("configs/pickplace.yaml")
+
+# Use the plant
+plant.initialize()
+plant.plan_grasp(obj_name="cube")
+plant.execute_grasp()
 ```
 
-### Use Modules Independently
+### 2. Using Individual Components
+
 ```python
-# Collision detection only
-from fullstack_manip.core import CollisionChecker
-checker = CollisionChecker(model, data)
-in_contact = checker.detect_contact("gripper", "cube")
+from fullstack_manip.core import (
+    Robot,
+    Gripper,
+    StateManager,
+    ObjectManager,
+    CollisionChecker,
+    IKSolver,
+    LimitManager,
+)
 
-# IK solving only
-from fullstack_manip.core import IKSolver
-solver = IKSolver(model, data, limits)
-q = solver.solve_ik_for_qpos("ee", "site", target_pos)
+# Robot control
+robot = Robot(model, data)
+pose = robot.get_body_pose("end_effector")
+robot.move_to_position(target_pos)
 
-# Limit management only
-from fullstack_manip.core import LimitManager
-manager = LimitManager(model, gripper_bodies, obstacles)
-limits = manager.set_limits()
+# Gripper control
+gripper = Gripper(model, data, config)
+gripper.open()
+gripper.grasp("cube", force=10.0)
+state = gripper.get_state()
+
+# State management
+state_mgr = StateManager()
+state_mgr.update_robot_state(position, velocity)
+robot_state = state_mgr.get_robot_state()
+
+# Object tracking
+obj_mgr = ObjectManager()
+obj_mgr.add_object("cube", position, "cube")
+obj = obj_mgr.get_object("cube")
+
+# Collision detection
+collision = CollisionChecker(model, data)
+in_contact = collision.detect_contact("gripper", "cube")
+force = collision.compute_contact_force("gripper", "cube")
+
+# IK solving
+ik_solver = IKSolver(model, data, limits)
+joint_pos = ik_solver.solve_ik_for_qpos("ee_site", target_pos)
+
+# Limit management
+limit_mgr = LimitManager(model, gripper_bodies, obstacles)
+limits = limit_mgr.set_limits()
+```
+
+### 3. Configuration System
+
+```python
+from fullstack_manip.core import PlantConfig
+
+# Load from YAML
+config = PlantConfig.from_yaml("configs/pickplace.yaml")
+
+# Load from JSON
+config = PlantConfig.from_json("configs/assembly.json")
+
+# Access config data
+print(config.robot_config)
+print(config.gripper_config)
+print(config.components)
+
+# Validate config
+config.validate()
+```
+
+### 4. Visualization
+
+```python
+from fullstack_manip.core import visualize_plant, visualize_config
+
+# Visualize plant architecture
+visualize_plant(plant, output_dir="diagrams/")
+
+# Visualize configuration
+visualize_config("configs/pickplace.yaml", output_dir="diagrams/")
+
+# Generate custom diagrams
+from fullstack_manip.core import PlantVisualizer
+viz = PlantVisualizer(plant)
+viz.generate_component_diagram("diagrams/components.png")
+viz.generate_dataflow_diagram("diagrams/dataflow.png")
+```
+
+### 5. Complete Example
+
+```python
+# Complete pick-and-place workflow
+from fullstack_manip.core import create_plant_from_config
+
+# 1. Load configuration
+plant = create_plant_from_config("configs/pickplace.yaml")
+
+# 2. Initialize
+plant.initialize()
+
+# 3. Plan grasp
+plant.plan_grasp(obj_name="cube", approach_height=0.1)
+
+# 4. Execute grasp
+success = plant.execute_grasp()
+
+# 5. Plan place
+plant.plan_place(target_pos=[0.5, 0.0, 0.2])
+
+# 6. Execute place
+plant.execute_place()
+
+# 7. Get state
+state = plant.get_state()
+print(f"Task complete: {state.task_complete}")
 ```
 
 ---
 
-**Status**: ✅ Complete  
-**Date**: October 14, 2025
+## 📚 Additional Resources
+
+- **Full Documentation**: See `docs/modular-architecture-readme.md`
+- **Configuration Guide**: See `docs/configuration-system.md`
+- **Visualization Guide**: See `docs/visualization-system.md`
+- **Migration Guide**: See `docs/migration-guide.md`
+- **Gripper API**: See `docs/gripper.md`
+- **Examples**: See `examples/` directory
+- **Quick Start**: See `docs/QUICK_REFERENCE.md`
+
+---
+
+**Status**: ✅ Production Ready  
+**Last Updated**: October 16, 2025  
+**Package Version**: See `pyproject.toml`

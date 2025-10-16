@@ -1,0 +1,28 @@
+// ManipulationPlant Architecture
+digraph {
+	rankdir=TB
+	node [shape=box style="rounded,filled"]
+	plant [label="ManipulationPlant
+(Orchestrator)" fillcolor=lightblue]
+	robot [label="Robot
+(Kinematics)" fillcolor=lightgreen]
+	gripper [label="Gripper
+(End-effector)" fillcolor=lightgreen]
+	state [label="StateManager
+(State Tracking)" fillcolor=lightyellow]
+	objects [label="ObjectManager
+(Scene Understanding)" fillcolor=lightyellow]
+	planner [label="MotionPlanner
+(Path Planning)" fillcolor=lightcoral]
+	controller [label="Controller
+(Execution)" fillcolor=lightcoral]
+	sensor [label="Sensors
+(Perception)" fillcolor=lightcoral]
+	plant -> robot [label=manages]
+	plant -> state [label=uses]
+	plant -> objects [label=uses]
+	plant -> planner [label=uses style=dashed]
+	plant -> controller [label=uses style=dashed]
+	plant -> sensor [label=uses style=dashed]
+	robot -> gripper [label=has]
+}
