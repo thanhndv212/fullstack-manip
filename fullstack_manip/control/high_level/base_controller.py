@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import numpy as np
 
+from ..motion_executor import MotionExecutor
+
 if TYPE_CHECKING:  # pragma: no cover - circular import guard
     from ...core.robot import Robot
 
@@ -27,6 +29,7 @@ class BaseController(ABC):
         self,
         robot: "Robot",
         reach_threshold: Optional[np.ndarray] = None,
+        motion_executor: Optional[MotionExecutor] = None,
     ) -> None:
         """Initialize the base controller.
 
@@ -34,6 +37,9 @@ class BaseController(ABC):
             robot: Robot instance to control.
             reach_threshold: 3D array defining reach tolerances [x, y, z].
                 Defaults to [0.1, 0.1, 0.1] meters.
+            motion_executor: Optional helper responsible for planning and
+                executing Cartesian motions. If None, a default executor is
+                created using the provided robot instance.
         """
         if robot is None:
             raise ValueError("Robot instance must be provided")
@@ -46,6 +52,11 @@ class BaseController(ABC):
         )
 
         self._validate_reach_threshold()
+        self.motion_executor = (
+            motion_executor
+            if motion_executor is not None
+            else MotionExecutor(robot)
+        )
 
     def _validate_reach_threshold(self) -> None:
         """Validate that reach_threshold is properly formatted."""
@@ -108,17 +119,40 @@ class BaseController(ABC):
     ) -> None:
         """Move the end-effector to a target pose.
 
+        The method delegates to the configured :class:`MotionExecutor`
+        which coordinates planning and low-level control to reach the
+        desired Cartesian pose. Motion execution will stop early if
+        contact is detected with a grasped object.
+
         Args:
             target_pos: Target position [x, y, z].
-            target_orient: Target orientation as quaternion. If None, maintains
-                current orientation.
-            duration: Duration (seconds) for the motion.
+            target_orient: Target orientation as quaternion [w, x, y, z].
+                If None, maintains current orientation.
+            duration: Duration (seconds) for the motion. Default is 4.0s.
 
         Raises:
-            ValueError: If target_pos is invalid.
+            ValueError: If the provided pose parameters are invalid.
             RuntimeError: If motion planning or execution fails.
+
+        Example:
+            >>> controller.move_to_pose(
+            ...     target_pos=np.array([0.5, 0.0, 0.3]),
+            ...     target_orient=None,  # maintain current orientation
+            ...     duration=3.0
+            ... )
         """
-        self.robot.move_to_position(target_pos, target_orient, duration)
+        try:
+            self.motion_executor.move_to_pose(
+                target_pos=target_pos,
+                target_orient=target_orient,
+                duration=duration,
+            )
+        except RuntimeError:
+            raise
+        except Exception as exc:  # pragma: no cover - defensive
+            raise RuntimeError(
+                f"Unexpected error during motion execution: {exc}"
+            ) from exc
 
     def get_controller_state(self) -> Dict[str, Any]:
         """Return the current state of the controller.

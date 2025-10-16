@@ -122,7 +122,7 @@ class VisualServoController(BaseController):
             target_pos = target_pos + offset
 
         try:
-            self.robot.move_to_position(target_pos, target_orient)
+            self.move_to_pose(target_pos, target_orient)
             return True
         except RuntimeError as e:
             print(f"Failed to move to visual target: {e}")
@@ -194,7 +194,7 @@ class VisualServoController(BaseController):
         target_pos = marker_pos + offset
 
         try:
-            self.robot.move_to_position(target_pos, marker_orient)
+            self.move_to_pose(target_pos, marker_orient)
             return True
         except RuntimeError:
             return False
@@ -251,11 +251,8 @@ class VisualServoController(BaseController):
         interaction_matrix = self._compute_interaction_matrix()
 
         try:
-            velocity = (
-                -self.servo_gain
-                * np.linalg.pinv(interaction_matrix)
-                @ feature_error
-            )
+            pseudo_inverse = np.linalg.pinv(interaction_matrix)
+            velocity = -self.servo_gain * pseudo_inverse @ feature_error
         except np.linalg.LinAlgError:
             velocity = np.zeros(6)
 
@@ -290,7 +287,7 @@ class VisualServoController(BaseController):
         new_pos = ee_pos + velocity[:3] * dt
 
         # Apply motion
-        self.robot.move_to_position(new_pos, ee_orient, duration=dt)
+        self.move_to_pose(new_pos, ee_orient, duration=dt)
 
     def _get_centered_features(self) -> np.ndarray:
         """Get features for centered alignment (image center)."""

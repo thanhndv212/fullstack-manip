@@ -113,7 +113,7 @@ class ForceControlController(BaseController):
             direction = force_vector / force_magnitude
             target = ee_pos + direction * 0.001  # Small step
 
-            self.robot.move_to_position(target, duration=self.robot.dt)
+            self.move_to_pose(target, duration=self.robot.dt)
 
     def maintain_contact(
         self,
@@ -187,7 +187,7 @@ class ForceControlController(BaseController):
             step_size = min(approach_speed * self.robot.dt, distance)
             next_pos = ee_pos + direction * step_size
 
-            self.robot.move_to_position(next_pos, duration=self.robot.dt)
+            self.move_to_pose(next_pos, duration=self.robot.dt)
 
             ee_pos, _ = self.robot.get_body_pose(self.robot.end_effector_name)
             distance = np.linalg.norm(target_pos - ee_pos)
@@ -203,7 +203,7 @@ class ForceControlController(BaseController):
         """Internal method for force-controlled motion."""
         # Simplified force control - would use proper hybrid
         # position/force control in practice
-        self.robot.move_to_position(target_pos, target_orient)
+        self.move_to_pose(target_pos, target_orient)
 
     def _measure_contact_force(self, body_name: str) -> float:
         """Measure total contact force on specified body.
@@ -243,9 +243,7 @@ class ForceControlController(BaseController):
         adjustment = 0.001 * np.sign(force_error)
         adjusted_pos = ee_pos + np.array([0, 0, adjustment])
 
-        self.robot.move_to_position(
-            adjusted_pos, ee_orient, duration=self.robot.dt
-        )
+        self.move_to_pose(adjusted_pos, ee_orient, duration=self.robot.dt)
 
     def reset(self) -> None:
         """Reset force controller state."""

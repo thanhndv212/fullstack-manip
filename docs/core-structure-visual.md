@@ -24,6 +24,7 @@ fullstack_manip/
 │   └── interfaces.py                  # Protocol interfaces for extensibility
 │
 ├── control/
+│   ├── motion_executor.py            # Motion execution helper
 │   ├── high_level/
 │   │   ├── gravity_compensation_controller.py
 │   │   ├── impedance_controller.py
@@ -142,6 +143,12 @@ Application Layer
 | **visualization.py** | Diagram generation | `PlantVisualizer`, `ConfigVisualizer`, `generate_diagrams()` |
 | **interfaces.py** | Protocol definitions | `RobotProtocol`, `GripperProtocol`, etc. |
 
+### Control Utilities
+
+- **control/motion_executor.py** – Bridges motion planning with low-level PID
+    execution for all high-level controllers, replacing the older
+    `Robot.move_to_position` helper.
+
 ## 🔗 Module Dependencies
 
 ```
@@ -217,6 +224,7 @@ Legend:
 - [x] **Behavior tree support** - execution/behaviors/
 - [x] **Skills framework** - execution/skills/
 - [x] **Motion planning** - planning/motion_planner.py
+- [x] **Motion execution** - control/motion_executor.py
 - [x] **Controllers** - control/high_level/
 - [x] **Simulation** - simulation/ package
 

@@ -69,7 +69,7 @@ class PickPlaceController(BaseController):
                 raise ValueError("Object position is out of reach")
 
             top_position = object_position + top_offset
-            self.robot.move_to_position(top_position, object_orientation)
+            self.move_to_pose(top_position, object_orientation)
             time.sleep(3)
 
             self.robot._open_gripper()
@@ -80,7 +80,7 @@ class PickPlaceController(BaseController):
             )
 
             grasp_position = object_position + grasp_offset
-            self.robot.move_to_position(grasp_position, object_orientation)
+            self.move_to_pose(grasp_position, object_orientation)
             time.sleep(3)
 
             self.robot._close_gripper()
@@ -95,7 +95,7 @@ class PickPlaceController(BaseController):
         if target_position.shape != (3,):
             raise ValueError("Target position must be a 3D numpy array")
 
-        self.robot.move_to_position(target_position)
+        self.move_to_pose(target_position)
         self.robot._open_gripper()
 
 

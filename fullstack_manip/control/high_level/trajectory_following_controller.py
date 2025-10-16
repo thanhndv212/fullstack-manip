@@ -134,10 +134,13 @@ class TrajectoryFollowingController(BaseController):
         orientations = [wp[1] for wp in cartesian_waypoints]
 
         for i in range(len(positions)):
-            self.robot.move_to_position(
+            segment_duration = (
+                duration / len(positions) if duration else 4.0
+            )
+            self.move_to_pose(
                 positions[i],
                 orientations[i],
-                duration=duration / len(positions) if duration else 4.0,
+                duration=segment_duration,
             )
 
     def _validate_waypoints(self, waypoints: List[np.ndarray]) -> None:
@@ -188,22 +191,33 @@ class TrajectoryFollowingController(BaseController):
         self._current_trajectory = trajectory
 
         current_joint_positions = self.robot.get_robot_joint_positions()
+        if current_joint_positions is None:
+            raise RuntimeError("Robot joint positions are unavailable")
+
+        joint_positions = np.array(current_joint_positions, dtype=float)
+        pid_controller = self.motion_executor.pid_controller
+        dt = getattr(self.motion_executor, "dt", self.robot.dt)
+        viewer = getattr(self.robot, "viewer", None)
 
         for i, target in enumerate(trajectory):
-            control_signal = self.robot.pid_controller.compute(
+            control_signal = pid_controller.compute(
                 target,
-                current_joint_positions,
+                joint_positions,
             )
 
-            current_joint_positions += (
-                control_signal * self.robot.dt * self.velocity_scaling
+            joint_positions[: control_signal.shape[0]] += (
+                control_signal * dt * self.velocity_scaling
             )
 
-            self.robot.viewer.step(current_joint_positions)
+            if hasattr(self.robot, "set_robot_joint_positions"):
+                self.robot.set_robot_joint_positions(joint_positions)
+
+            if viewer is not None:
+                viewer.step(joint_positions)
 
             # Check tracking error
             tracking_error = np.linalg.norm(
-                current_joint_positions[: target.shape[0]] - target
+                joint_positions[: target.shape[0]] - target
             )
             if tracking_error > self.tracking_tolerance:
                 print(

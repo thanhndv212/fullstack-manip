@@ -359,7 +359,7 @@ class AdmittanceController(BaseController):
             next_pos = current_pos + (direction / distance) * step_size
 
             try:
-                self.robot.move_to_position(
+                self.move_to_pose(
                     next_pos,
                     current_orient,
                     duration=self.robot.dt,

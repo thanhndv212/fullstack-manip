@@ -259,7 +259,7 @@ class ImpedanceController(BaseController):
 
             # Apply control
             new_pos = current_pos + control_velocity
-            self.robot.move_to_position(
+            self.move_to_pose(
                 new_pos,
                 (
                     self._desired_orient
