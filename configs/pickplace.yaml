@@ -1,0 +1,87 @@
+# Pick-and-Place Manipulation Plant Configuration
+# This configuration defines a complete pick-and-place system
+
+name: pickplace_plant
+
+# Robot configuration
+robot:
+  type: generic  # Robot type: generic, ur5, franka, etc.
+  model_path: "hardware/urdf/robot.xml"
+  base_link: "base_link"
+  ee_link: "end_effector"
+
+# Gripper configuration
+gripper:
+  joint_names:
+    - "gripper_left"
+    - "gripper_right"
+  open_position: 0.04
+  closed_position: 0.0
+  min_force: 0.1
+  max_force: 10.0
+
+# Motion planner configuration (optional)
+motion_planner:
+  type: rrt  # Options: rrt, rrt_star, prm
+  max_planning_time: 5.0
+  step_size: 0.1
+
+# Controllers configuration (optional)
+controllers:
+  pid_controller:
+    type: pid
+    kp: 100.0
+    ki: 0.0
+    kd: 10.0
+  
+  impedance_controller:
+    type: impedance
+    stiffness: 1000.0
+    damping: 50.0
+
+# Sensors configuration (optional)
+sensors:
+  camera:
+    type: camera
+    resolution: [640, 480]
+    fov: 60
+  
+  force_sensor:
+    type: force_torque
+    location: end_effector
+
+# State manager configuration (optional)
+state_manager:
+  update_rate: 100  # Hz
+
+# Scene objects
+objects:
+  - name: red_cube
+    type: box
+    position: [0.5, 0.0, 0.05]
+    orientation: [1, 0, 0, 0]  # quaternion [w, x, y, z]
+    properties:
+      size: [0.05, 0.05, 0.05]
+      mass: 0.1
+      graspable: true
+      color: [1, 0, 0, 1]
+  
+  - name: blue_cylinder
+    type: cylinder
+    position: [0.4, 0.2, 0.05]
+    orientation: [1, 0, 0, 0]
+    properties:
+      size: [0.03, 0.06]  # [radius, height]
+      mass: 0.08
+      graspable: true
+      color: [0, 0, 1, 1]
+  
+  - name: target_area
+    type: box
+    position: [0.3, -0.2, 0.01]
+    orientation: [1, 0, 0, 0]
+    properties:
+      size: [0.15, 0.15, 0.02]
+      mass: 0
+      graspable: false
+      color: [0, 1, 0, 0.3]
