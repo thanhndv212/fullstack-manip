@@ -1,0 +1,6 @@
+# Default loop time-steps (seconds)
+sim: 0.002
+control: 0.01
+planner: 0.1
+estimator: 0.01
+sensor: 0.02

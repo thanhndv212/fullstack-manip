@@ -20,6 +20,7 @@ import numpy as np
 from ..simulation.viewer import MuJoCoViewer
 from .collision import CollisionChecker
 from .gripper import Gripper
+from ..utils.rate_config import RateConfig, load_rate_config
 
 
 class Robot:
@@ -48,8 +49,10 @@ class Robot:
         gripper_bodies: List[str] = None,
         obstacles: List[str] = None,
         motion_planner=None,  # Deprecated, kept for backward compatibility
+        rate_config: Optional[RateConfig] = None,
     ):
         try:
+            self.rates = rate_config or load_rate_config(defaults=RateConfig())
             self.model = model
             self.data = mujoco.MjData(self.model) if data is None else data
             self.end_effector_name = end_effector_name
@@ -79,7 +82,7 @@ class Robot:
                 viewer=None,  # Will be set after viewer initialization
                 end_effector_name=self.end_effector_name,
                 gripper_bodies=self.gripper_bodies,
-                dt=0.01,
+                dt=self.rates.control,
             )
 
             # Initialize viewer
@@ -94,7 +97,12 @@ class Robot:
             self.scene_nq = self.model.nq
             self.scene_nu = self.model.nu
             self.robot_nq = self.model.nu
-            self.dt = 0.01
+            self.sim_dt = self.rates.sim
+            self.control_dt = self.rates.control
+            self.planner_dt = self.rates.planner
+            self.estimator_dt = self.rates.estimator
+            self.sensor_dt = self.rates.sensor
+            self.dt = self.control_dt
 
             # Set initial configuration
             self.data.qpos[:] = self.model.key("home").qpos

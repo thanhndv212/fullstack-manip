@@ -239,7 +239,7 @@ class ImpedanceController(BaseController):
         Args:
             duration: Duration to run control loop (seconds).
         """
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             # Get current state
@@ -255,7 +255,7 @@ class ImpedanceController(BaseController):
             impedance_force = self.stiffness[:3, :3] @ pos_error
 
             # Convert force to motion (simplified)
-            control_velocity = impedance_force * self.robot.dt
+            control_velocity = impedance_force * self.dt
 
             # Apply control
             new_pos = current_pos + control_velocity
@@ -266,7 +266,7 @@ class ImpedanceController(BaseController):
                     if self._desired_orient is not None
                     else current_orient
                 ),
-                duration=self.robot.dt,
+                duration=self.dt,
             )
 
     def get_impedance_parameters(self) -> dict:

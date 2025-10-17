@@ -15,6 +15,7 @@ import numpy as np
 from .low_level.pid_controller import PIDController
 from ..core.robot import Robot
 from ..planning.motion_planner import MotionPlanner
+from ..utils.rate_config import RateConfig
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,13 +31,26 @@ class MotionExecutor:
         dt: Optional[float] = None,
     ) -> None:
         self.robot = robot
+        if dt is not None:
+            if dt <= 0.0:
+                raise ValueError("MotionExecutor dt override must be positive")
+        rates_source = getattr(robot, "rates", None)
+        if rates_source is not None and not isinstance(
+            rates_source, RateConfig
+        ):
+            raise TypeError(
+                "robot.rates must be a RateConfig when present;"
+                f" received {type(rates_source)}"
+            )
+        self.rates = rates_source or RateConfig()
+        dt_value = float(dt or self.rates.control)
+        self.dt = dt_value
         self._motion_planner = (
             motion_planner or self._create_default_motion_planner()
         )
         self._pid_controller = (
             pid_controller or self._create_default_pid_controller()
         )
-        self.dt = float(self.robot.dt)
 
     @property
     def motion_planner(self) -> MotionPlanner:
@@ -155,7 +169,7 @@ class MotionExecutor:
             end_effector_type=getattr(self.robot, "end_effector_type", None),
             gripper_bodies=getattr(self.robot, "gripper_bodies", None),
             obstacles=getattr(self.robot, "obstacles", None),
-            dt=float(getattr(self.robot, "dt", 0.01)),
+            dt=float(self.rates.planner),
         )
 
     def _create_default_pid_controller(self) -> PIDController:

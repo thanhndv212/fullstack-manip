@@ -157,13 +157,13 @@ class TrajectoryFollowingController(BaseController):
         if duration is None:
             duration = len(waypoints) * 2.0
 
-        num_steps = int(duration / self.robot.dt)
-        trajectory = []
+        num_steps = int(duration / self.dt)
+        trajectory: list[np.ndarray] = []
 
         for i in range(len(waypoints) - 1):
             start = waypoints[i]
             end = waypoints[i + 1]
-            segment_steps = num_steps // (len(waypoints) - 1)
+            segment_steps = max(1, num_steps // (len(waypoints) - 1))
 
             for t in range(segment_steps):
                 alpha = t / segment_steps
@@ -196,7 +196,7 @@ class TrajectoryFollowingController(BaseController):
 
         joint_positions = np.array(current_joint_positions, dtype=float)
         pid_controller = self.motion_executor.pid_controller
-        dt = getattr(self.motion_executor, "dt", self.robot.dt)
+        dt = getattr(self.motion_executor, "dt", self.dt)
         viewer = getattr(self.robot, "viewer", None)
 
         for i, target in enumerate(trajectory):

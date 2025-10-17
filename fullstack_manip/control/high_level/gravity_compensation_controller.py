@@ -74,7 +74,7 @@ class GravityCompensationController(BaseController):
 
         trajectory = [] if record_trajectory else None
 
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             # Compute gravity compensation torques
@@ -102,7 +102,7 @@ class GravityCompensationController(BaseController):
             List of (joint_positions, end_effector_pose) tuples.
         """
         trajectory = []
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         print("Gravity compensation enabled. Manually move the robot...")
 
@@ -152,7 +152,7 @@ class GravityCompensationController(BaseController):
         if not 0.0 <= stiffness <= 1.0:
             raise ValueError("Stiffness must be in [0, 1]")
 
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             current_joints = self.robot.get_robot_joint_positions()
@@ -265,9 +265,9 @@ class GravityCompensationController(BaseController):
         print("Starting friction calibration...")
         print("Slowly move each joint back and forth")
 
-        steps = int(duration / self.robot.dt)
-        torque_samples = []
-        velocity_samples = []
+        steps = int(duration / self.dt)
+        torque_samples: list[np.ndarray] = []
+        velocity_samples: list[np.ndarray] = []
 
         for _ in range(steps):
             gravity_torques = self._compute_gravity_torques()

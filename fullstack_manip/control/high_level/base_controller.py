@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 import numpy as np
 
 from ..motion_executor import MotionExecutor
+from ...utils.rate_config import RateConfig
 
 if TYPE_CHECKING:  # pragma: no cover - circular import guard
     from ...core.robot import Robot
@@ -45,6 +46,12 @@ class BaseController(ABC):
             raise ValueError("Robot instance must be provided")
 
         self.robot = robot
+        self.rates = getattr(robot, "rates", RateConfig())
+        self.control_dt = getattr(
+            self.rates,
+            "control",
+            getattr(robot, "dt", 0.01),
+        )
         self.reach_threshold = (
             reach_threshold
             if reach_threshold is not None
@@ -57,6 +64,7 @@ class BaseController(ABC):
             if motion_executor is not None
             else MotionExecutor(robot)
         )
+        self.dt = self.control_dt
 
     def _validate_reach_threshold(self) -> None:
         """Validate that reach_threshold is properly formatted."""

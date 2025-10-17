@@ -140,7 +140,7 @@ class VisualServoController(BaseController):
                 from camera image.
             duration: Duration to track (seconds).
         """
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             current_features = feature_extractor()
@@ -283,7 +283,7 @@ class VisualServoController(BaseController):
         )
 
         # Integrate velocity for small displacement
-        dt = self.robot.dt
+        dt = self.dt
         new_pos = ee_pos + velocity[:3] * dt
 
         # Apply motion

@@ -101,7 +101,7 @@ class ForceControlController(BaseController):
         if force_vector.shape != (3,):
             raise ValueError("Force vector must be 3D")
 
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             # Convert Cartesian force to joint torques (simplified)
@@ -113,7 +113,7 @@ class ForceControlController(BaseController):
             direction = force_vector / force_magnitude
             target = ee_pos + direction * 0.001  # Small step
 
-            self.move_to_pose(target, duration=self.robot.dt)
+            self.move_to_pose(target, duration=self.dt)
 
     def maintain_contact(
         self,
@@ -129,7 +129,7 @@ class ForceControlController(BaseController):
         Returns:
             True if contact was successfully maintained, False otherwise.
         """
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
         contact_maintained = True
 
         for _ in range(steps):
@@ -184,10 +184,10 @@ class ForceControlController(BaseController):
 
             # Take small step towards target
             direction = (target_pos - ee_pos) / distance
-            step_size = min(approach_speed * self.robot.dt, distance)
+            step_size = min(approach_speed * self.dt, distance)
             next_pos = ee_pos + direction * step_size
 
-            self.move_to_pose(next_pos, duration=self.robot.dt)
+            self.move_to_pose(next_pos, duration=self.dt)
 
             ee_pos, _ = self.robot.get_body_pose(self.robot.end_effector_name)
             distance = np.linalg.norm(target_pos - ee_pos)
@@ -242,8 +242,7 @@ class ForceControlController(BaseController):
         # Move away if force too high, towards if too low
         adjustment = 0.001 * np.sign(force_error)
         adjusted_pos = ee_pos + np.array([0, 0, adjustment])
-
-        self.move_to_pose(adjusted_pos, ee_orient, duration=self.robot.dt)
+        self.move_to_pose(adjusted_pos, ee_orient, duration=self.dt)
 
     def reset(self) -> None:
         """Reset force controller state."""

@@ -97,7 +97,7 @@ class AdmittanceController(BaseController):
             raise ValueError("Velocity limit must be positive")
 
         self._initialize_state()
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             external_force = force_source()
@@ -112,7 +112,7 @@ class AdmittanceController(BaseController):
 
             # Compute admittance response
             acceleration = self._compute_acceleration(external_force)
-            self._velocity += acceleration * self.robot.dt
+            self._velocity += acceleration * self.dt
 
             # Apply velocity limits
             velocity_magnitude = np.linalg.norm(self._velocity[:3])
@@ -120,7 +120,7 @@ class AdmittanceController(BaseController):
                 self._velocity[:3] *= velocity_limit / velocity_magnitude
 
             # Update position
-            self._position += self._velocity * self.robot.dt
+            self._position += self._velocity * self.dt
 
             # Apply to robot
             self._apply_position_update()
@@ -150,14 +150,14 @@ class AdmittanceController(BaseController):
 
         try:
             self._initialize_state()
-            steps = int(duration / self.robot.dt)
+            steps = int(duration / self.dt)
 
             for _ in range(steps):
                 external_force = self._measure_external_force()
                 acceleration = self._compute_acceleration(external_force)
 
-                self._velocity += acceleration * self.robot.dt
-                self._position += self._velocity * self.robot.dt
+                self._velocity += acceleration * self.dt
+                self._position += self._velocity * self.dt
 
                 self._apply_position_update()
 
@@ -187,14 +187,14 @@ class AdmittanceController(BaseController):
         self._initialize_state()
         recorded_joints = []
 
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             external_force = self._measure_external_force()
             acceleration = self._compute_acceleration(external_force)
 
-            self._velocity += acceleration * self.robot.dt
-            self._position += self._velocity * self.robot.dt
+            self._velocity += acceleration * self.dt
+            self._position += self._velocity * self.dt
 
             self._apply_position_update()
 
@@ -274,7 +274,7 @@ class AdmittanceController(BaseController):
             duration: Duration to run (seconds).
             force_threshold: Minimum force to trigger motion.
         """
-        steps = int(duration / self.robot.dt)
+        steps = int(duration / self.dt)
 
         for _ in range(steps):
             external_force = self._measure_external_force()
@@ -286,8 +286,8 @@ class AdmittanceController(BaseController):
                 continue
 
             acceleration = self._compute_acceleration(external_force)
-            self._velocity += acceleration * self.robot.dt
-            self._position += self._velocity * self.robot.dt
+            self._velocity += acceleration * self.dt
+            self._position += self._velocity * self.dt
 
             self._apply_position_update()
 
@@ -362,7 +362,7 @@ class AdmittanceController(BaseController):
                 self.move_to_pose(
                     next_pos,
                     current_orient,
-                    duration=self.robot.dt,
+                    duration=self.dt,
                 )
             except RuntimeError:
                 pass
