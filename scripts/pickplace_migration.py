@@ -7,6 +7,8 @@ architecture while maintaining the same functionality.
 from pathlib import Path
 import numpy as np
 
+from fullstack_manip.core.collision import CollisionChecker
+
 try:
     from fullstack_manip.core import (
         Robot,
@@ -79,12 +81,16 @@ def example_1_manual_builder():
         obstacles=obstacles,
     )
 
+    # Create collision checker is now internal to Gripper and Robot
+    collision_checker = CollisionChecker(scene_manager.model, scene_manager.data)
+
     # Create gripper as separate component
     gripper = Gripper(
         scene_manager.model,
         scene_manager.data,
-        joint_names=gripper_joint_names,
-        body_names=gripper_bodies,
+        collision_checker=collision_checker,
+        gripper_joint_names=gripper_joint_names,
+        gripper_bodies=gripper_bodies,
     )
     gripper.set_object_geom(object_name)
     gripper.set_positions(close_pos=0.0, open_pos=1.0)
@@ -98,7 +104,7 @@ def example_1_manual_builder():
     object_manager.register_object(
         name=object_name,
         object_type="box",
-        geom_name=object_name,
+        body_name=object_name,
     )
 
     # Build plant using builder pattern

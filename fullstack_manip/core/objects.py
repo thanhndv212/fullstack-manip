@@ -247,7 +247,7 @@ class ObjectManager:
         """
         self.model = model
         self.data = data
-        self._objects: Dict[str, ManipulationObject] = {}
+        self.objects: Dict[str, ManipulationObject] = {}
 
     def register_object(
         self,
@@ -276,41 +276,41 @@ class ObjectManager:
             body_name=body_name,
             properties=properties,
         )
-        self._objects[name] = obj
+        self.objects[name] = obj
         return obj
 
     def unregister_object(self, name: str) -> None:
         """Remove object from tracking."""
-        if name in self._objects:
-            del self._objects[name]
+        if name in self.objects:
+            del self.objects[name]
 
     def get_object(self, name: str) -> Optional[ManipulationObject]:
         """Get object by name."""
-        return self._objects.get(name)
+        return self.objects.get(name)
 
-    def get_all_objects(self) -> Dict[str, ManipulationObject]:
+    def get_allobjects(self) -> Dict[str, ManipulationObject]:
         """Get all registered objects."""
-        return self._objects.copy()
+        return self.objects.copy()
 
-    def get_objects_by_type(
+    def getobjects_by_type(
         self, object_type: ObjectType
     ) -> List[ManipulationObject]:
         """Get all objects of a specific type."""
         return [
             obj
-            for obj in self._objects.values()
+            for obj in self.objects.values()
             if obj.object_type == object_type
         ]
 
-    def get_graspable_objects(self) -> List[ManipulationObject]:
+    def get_graspableobjects(self) -> List[ManipulationObject]:
         """Get all graspable objects."""
         return [
-            obj for obj in self._objects.values() if obj.properties.graspable
+            obj for obj in self.objects.values() if obj.properties.graspable
         ]
 
-    def get_grasped_objects(self) -> List[ManipulationObject]:
+    def get_graspedobjects(self) -> List[ManipulationObject]:
         """Get all currently grasped objects."""
-        return [obj for obj in self._objects.values() if obj.is_grasped()]
+        return [obj for obj in self.objects.values() if obj.is_grasped()]
 
     def find_nearest_object(
         self, position: np.ndarray, max_distance: float = np.inf
@@ -328,7 +328,7 @@ class ObjectManager:
         nearest = None
         min_dist = max_distance
 
-        for obj in self._objects.values():
+        for obj in self.objects.values():
             obj_pos, _ = obj.get_pose()
             dist = np.linalg.norm(obj_pos - position)
             if dist < min_dist:
@@ -344,7 +344,7 @@ class ObjectManager:
         Args:
             state_manager: StateManager instance to update
         """
-        for obj in self._objects.values():
+        for obj in self.objects.values():
             pos, quat = obj.get_pose()
             vel, ang_vel = obj.get_velocity()
             state_manager.update_object_state(
@@ -360,12 +360,12 @@ class ObjectManager:
     def get_scene_summary(self) -> Dict[str, Any]:
         """Get summary of all objects in scene."""
         return {
-            "total_objects": len(self._objects),
+            "totalobjects": len(self.objects),
             "objects": {
-                name: obj.to_dict() for name, obj in self._objects.items()
+                name: obj.to_dict() for name, obj in self.objects.items()
             },
-            "graspable_count": len(self.get_graspable_objects()),
-            "grasped_count": len(self.get_grasped_objects()),
+            "graspable_count": len(self.get_graspableobjects()),
+            "grasped_count": len(self.get_graspedobjects()),
         }
 
 

@@ -13,6 +13,7 @@ import mujoco
 
 from .interfaces import (
     ControllerInterface,
+    GripperInterface,
     MotionPlannerInterface,
     RobotInterface,
     SceneUnderstandingInterface,
@@ -403,6 +404,7 @@ class ManipulationPlantBuilder:
         self._model: Optional[mujoco.MjModel] = None
         self._data: Optional[mujoco.MjData] = None
         self._robot: Optional[RobotInterface] = None
+        self._gripper: Optional[GripperInterface] = None
         self._motion_planner: Optional[MotionPlannerInterface] = None
         self._state_manager: Optional[StateManagerInterface] = None
         self._object_manager: Optional[ObjectManager] = None
@@ -427,6 +429,11 @@ class ManipulationPlantBuilder:
     def with_robot(self, robot: RobotInterface) -> ManipulationPlantBuilder:
         """Set robot component."""
         self._robot = robot
+        return self
+    
+    def with_gripper(self, gripper: GripperInterface) -> ManipulationPlantBuilder:
+        """Set gripper component."""
+        self._gripper = gripper
         return self
 
     def with_motion_planner(
